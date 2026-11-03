@@ -10,6 +10,17 @@ desktop.ini
 *.swp
 .env
 node_modules/
-# �������
+
+# 调试输出
 _analyze.txt
 *.log
+
+# 构建产物与本地配置
+app/build/
+app/android/build/
+app/android/.gradle/
+app/android/local.properties
+app/.dart_tool/
+
+# 打好的安装包（用 git tag + Release 分发，不进历史）
+*.apk

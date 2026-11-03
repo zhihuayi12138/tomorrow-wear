@@ -14,7 +14,8 @@
 | [`原型图.html`](原型图.html) | 12 屏高保真交互原型（浏览器直接打开） |
 | [`原型总览.png`](原型总览.png) | 上面那份原型的整页截图 |
 | [`界面截图总览.png`](界面截图总览.png) | **代码实际跑出来的** 11 屏，由 golden 测试生成 |
-| [`app/`](app/) | Flutter 工程，目前可编译、可通过静态检查与界面截图测试 |
+| [`明天穿什么-0.1.0.apk`](明天穿什么-0.1.0.apk) | 打好的安卓安装包（53.8 MB）。**不进 git**，只在本机；重新生成见下方「装到手机上」 |
+| [`app/`](app/) | Flutter 工程，可编译、可通过静态检查与界面截图测试 |
 
 原型是设计阶段的稿子，`界面截图总览.png` 才是代码的真实产物——两者有出入时以后者为准。
 
@@ -43,6 +44,16 @@
 | 身材档案 16 项、分组录入、历史对照 | 已完成 |
 | 身材趋势折线图 | **未做** |
 | 导出 / 导入（合并、替换） | 已完成 |
-| 打包 APK | **未做**，本机缺 Android SDK 与 JDK |
+| 打包 APK | 已完成，`明天穿什么-0.1.0.apk`（53.8 MB，minSdk 24 / targetSdk 36） |
+
+## 装到手机上
+
+1. 把 `明天穿什么-0.1.0.apk` 拷到手机（数据线、微信传文件、网盘都行）；
+2. 在手机上点开它，允许「安装未知来源应用」；
+3. 装完桌面出现「明天穿什么」。
+
+这个包装了 arm64-v8a、armeabi-v7a、x86_64 三种，主流安卓机都能装。包是用 debug 证书签的（`app/android/app/build.gradle.kts` 里 `signingConfig = signingConfigs.getByName("debug")`），能直接装，但**不适合上应用商店**，也别用它覆盖安装以后从商店装的正式版。
+
+安装包没进 git（`.gitignore` 里有 `*.apk`）。想重新生成，在 `app/` 下跑 `flutter build apk --release`，产物在 `build/app/outputs/flutter-apk/app-release.apk`。
 
 跑法见 [`app/README.md`](app/README.md)。

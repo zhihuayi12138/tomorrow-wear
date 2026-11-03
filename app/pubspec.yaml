@@ -19,7 +19,6 @@ dependencies:
   image: ^4.2.0
   file_picker: ^8.1.2
   share_plus: ^10.0.2
-  sqflite_common_ffi: ^2.3.3
 
 dev_dependencies:
   flutter_test:

@@ -6,9 +6,14 @@
 
 ## 跑起来
 
-需要 Flutter 3.47+。当前工程已经能通过静态检查与界面截图测试，但打出 APK 还需要另外装 Android SDK 与 JDK。
+需要 Flutter 3.47+。本机已装好 Android SDK 36 与 JDK 17，可以直接打 APK。
 
 ```powershell
+$env:PUB_HOSTED_URL="https://pub.flutter-io.cn"
+$env:FLUTTER_STORAGE_BASE_URL="https://storage.flutter-io.cn"
+$env:JAVA_HOME = "D:\android_dev\jdk\jdk-17.0.2"
+$env:ANDROID_HOME = "D:\android_dev\sdk"
+
 flutter pub get
 
 # 静态检查
@@ -16,16 +21,26 @@ dart analyze lib test
 
 # 渲染 11 张界面截图到 test/goldens/，然后人眼核对
 flutter test --update-goldens test/screens_golden_test.dart
+
+# 打安装包 → build/app/outputs/flutter-apk/app-release.apk
+flutter build apk --release
 ```
 
 `flutter analyze` 在某些中文路径下会崩在 analysis server 的 LSP 初始化上，用 `dart analyze` 代替即可。
 
-国内网络需要两个镜像变量：
+## 两台机器上踩过的坑（改构建配置前先读）
 
-```powershell
-$env:PUB_HOSTED_URL="https://pub.flutter-io.cn"
-$env:FLUTTER_STORAGE_BASE_URL="https://storage.flutter-io.cn"
-```
+工程原本放在 `D:\明天穿什么`，Android 构建在三个地方栽过跟头，现在都写进了 `android/` 里：
+
+| 现象 | 原因 | 处理 |
+|---|---|---|
+| `Your project path contains non-ASCII characters` | AGP 默认拒绝含中文的路径 | 工程已改名为 `D:\mingtian-chuanshenme`；`android.overridePathCheck=true` 留着兜底 |
+| `AOT snapshotter exited with code 255` / `Unable to read file: D:\���촩ʲô\...app.dill` | Dart AOT 快照器读不了中文路径 | 同上，改路径才是根治 |
+| `this and base files have different roots` | pub 缓存在 C 盘、工程在 D 盘，Kotlin 增量编译无法跨盘相对化 | `kotlin.incremental=false` + `org.gradle.daemon=false` |
+| `:file_picker is currently compiled against android-34` | 插件自己钉死 compileSdk 34，而上层要求 36 | `android/build.gradle.kts` 里给所有 subproject 抬到 36 |
+| `Failed to apply plugin: cmake;3.22.1` | NDK/CMake 首次构建要下载 | 已装好，留在 `D:\android_dev\sdk` |
+
+另外 `sqflite_common_ffi` 已从依赖里去掉：它只在桌面端测试用，但会触发 dart hook 去 GitHub 下载预编译的 `libsqlite3.so`，在打 Android 包时直接失败。测试用的是内存版 `FakeRepository`，不需要它。
 
 ## 现在能做什么
 
@@ -43,7 +58,6 @@ $env:FLUTTER_STORAGE_BASE_URL="https://storage.flutter-io.cn"
 - 自动分类（零样本 CLIP 未接入）
 - 身材趋势折线图
 - App 内连拍
-- 打包 APK
 
 ## 目录
 

@@ -1,6 +1,6 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
     <application
-        android:label="mingtian_chuanshenme"
+        android:label="明天穿什么"
         android:name="${applicationName}"
         android:icon="@mipmap/ic_launcher">
         <activity
