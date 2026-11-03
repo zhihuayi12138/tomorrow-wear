@@ -1,0 +1,795 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<title>明天穿什么 · 原型图 v0.1</title>
+<style>
+  :root{
+    --ink:#26231F; --ink2:#6E6960; --ink3:#A29C93;
+    --line:#EAE6DF; --soft:#F6F4F0; --tile:#F2F2F0;
+    --accent:#8C6A4F;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{
+    background:#EBE8E2;color:var(--ink);padding:44px 40px 72px;
+    font-family:-apple-system,BlinkMacSystemFont,"PingFang SC","Microsoft YaHei","Segoe UI",sans-serif;
+    -webkit-font-smoothing:antialiased;
+  }
+  .head{max-width:1840px;margin:0 auto 44px}
+  .head h1{font-size:28px;letter-spacing:-.02em;font-weight:640}
+  .head p{margin-top:10px;font-size:14px;line-height:1.75;color:var(--ink2);max-width:900px}
+  .legend{display:flex;gap:22px;margin-top:18px;flex-wrap:wrap;font-size:12px;color:var(--ink3)}
+  .legend b{display:inline-block;width:11px;height:11px;border-radius:3px;margin-right:6px;vertical-align:-1px}
+
+  .grid{max-width:1840px;margin:0 auto;display:grid;grid-template-columns:repeat(auto-fit,minmax(390px,1fr));gap:60px 44px;justify-items:center}
+
+  figure{display:flex;flex-direction:column;align-items:center;gap:16px}
+  .cap{font-size:13px;font-weight:650;letter-spacing:.02em;color:var(--ink)}
+  .cap span{color:var(--ink3);font-weight:500;margin-right:8px;font-variant-numeric:tabular-nums}
+  .note{font-size:11.5px;line-height:1.7;color:var(--ink2);max-width:390px;text-align:left}
+  .note b{color:var(--ink);font-weight:600}
+
+  .phone{
+    width:390px;height:844px;background:#fff;border-radius:40px;flex:none;
+    box-shadow:0 24px 60px rgba(40,34,26,.16),0 3px 10px rgba(40,34,26,.07);
+    overflow:hidden;display:flex;flex-direction:column;position:relative;
+  }
+  .sb{height:46px;flex:none;display:flex;align-items:flex-end;justify-content:space-between;padding:0 26px 6px;font-size:13px;font-weight:650}
+  .sb .dots{display:flex;align-items:center;gap:4px;font-size:11px;color:var(--ink)}
+  .bar{width:22px;height:11px;border:1.4px solid var(--ink);border-radius:3px;position:relative}
+  .bar::after{content:"";position:absolute;inset:1.5px;background:var(--ink);border-radius:1px;right:6px}
+
+  .body{flex:1;display:flex;flex-direction:column;overflow:hidden}
+
+  .hdr{display:flex;align-items:center;justify-content:space-between;padding:8px 22px 14px}
+  .hdr h2{font-size:25px;font-weight:660;letter-spacing:-.02em}
+  .hdr .act{font-size:20px;color:var(--ink2);width:30px;text-align:center}
+  .hdr .back{font-size:19px;color:var(--ink2);width:26px;white-space:nowrap}
+  .hdr .back.txt{font-size:13.5px;color:var(--ink2);width:auto;min-width:26px}
+  .hdr .step{font-size:12px;color:var(--ink3);font-variant-numeric:tabular-nums}
+
+  /* roles */
+  .roles{display:flex;gap:8px;padding:0 20px 14px;overflow:hidden}
+  .role{flex:none;padding:7px 15px;border-radius:19px;font-size:13px;color:var(--ink2);background:var(--soft);font-weight:540}
+  .role.on{background:var(--ink);color:#fff}
+  .role.add{padding:7px 12px;color:var(--ink3);background:#fff;border:1px dashed var(--line)}
+
+  .filters{display:flex;gap:8px;padding:0 20px 14px}
+  .chip{flex:none;padding:6px 12px;border-radius:14px;font-size:12px;color:var(--ink2);border:1px solid var(--line);background:#fff}
+  .chip.sq{width:30px;text-align:center;padding:6px 0}
+
+  .grid3{flex:1;overflow:hidden;padding:0 16px;display:grid;grid-template-columns:repeat(3,1fr);gap:10px;align-content:start}
+  .tile{display:flex;flex-direction:column;gap:5px}
+  .timg{aspect-ratio:1;border-radius:9px;background:var(--tile);display:flex;align-items:center;justify-content:center;position:relative}
+  .timg svg{width:66%;height:66%}
+  .tname{font-size:10.5px;color:var(--ink2);text-align:center;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .badge{position:absolute;right:5px;bottom:5px;background:rgba(255,255,255,.9);border-radius:7px;padding:1px 5px;font-size:8.5px;color:var(--ink2);font-weight:600}
+
+  .tabbar{flex:none;height:76px;border-top:1px solid var(--line);display:flex;align-items:flex-start;padding-top:9px;background:#fff;position:relative}
+  .tbi{flex:1;display:flex;flex-direction:column;align-items:center;gap:4px;font-size:10px;color:var(--ink3)}
+  .tbi.on{color:var(--ink)}
+  .tbi svg{width:21px;height:21px}
+  .fab{display:none}
+  .addbtn{display:flex;align-items:center;gap:5px;background:var(--ink);color:#fff;font-size:12.5px;font-weight:600;padding:7px 14px 7px 11px;border-radius:16px}
+  .addbtn span{font-size:15px;font-weight:300;line-height:1}
+
+  /* generic rows */
+  .card{background:#fff;border:1px solid var(--line);border-radius:14px;padding:14px 16px;margin:0 20px}
+  .row{display:flex;align-items:center;justify-content:space-between;padding:13px 0;border-bottom:1px solid var(--line);font-size:13.5px}
+  .row:last-child{border-bottom:none}
+  .row .k{color:var(--ink2)}
+  .row .v{color:var(--ink);font-weight:560;display:flex;align-items:center;gap:7px}
+  .sw{width:13px;height:13px;border-radius:4px;border:1px solid rgba(0,0,0,.08)}
+
+  .btnrow{display:flex;gap:10px;padding:14px 20px}
+  .btn{flex:1;height:46px;border-radius:23px;display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:600;background:var(--soft);color:var(--ink2)}
+  .btn.pri{background:var(--ink);color:#fff}
+  .btn.ghost{background:#fff;border:1px solid var(--line)}
+
+  .hint{font-size:11px;color:var(--ink3);text-align:center;padding:2px 20px 0}
+
+  /* confirm screen */
+  .bigimg{margin:4px 20px 0;aspect-ratio:1/.92;border-radius:16px;background:var(--tile);display:flex;align-items:center;justify-content:center;position:relative}
+  .bigimg svg{width:52%;height:52%}
+  .lowconf{position:absolute;left:12px;top:12px;background:#FBEDD9;color:#8A5A18;font-size:10.5px;font-weight:640;padding:4px 9px;border-radius:8px}
+  .segtoggle{display:inline-flex;background:var(--soft);border-radius:11px;padding:3px}
+  .segtoggle span{padding:5px 13px;border-radius:8px;font-size:11.5px;color:var(--ink2)}
+  .segtoggle span.on{background:#fff;color:var(--ink);font-weight:620;box-shadow:0 1px 3px rgba(0,0,0,.07)}
+
+  /* detail */
+  .hero{height:258px;flex:none;margin:0;background:var(--tile);display:flex;align-items:center;justify-content:center;position:relative}
+  .hero svg{width:42%;height:42%}
+  .dotsrow{position:absolute;bottom:12px;left:0;right:0;display:flex;justify-content:center;gap:5px}
+  .dt{width:5px;height:5px;border-radius:3px;background:rgba(38,35,31,.2)}
+  .dt.on{width:14px;background:var(--ink)}
+  .dt.worn{background:rgba(140,106,79,.45)}
+  .wornstrip{display:flex;gap:9px;padding:4px 20px 0;overflow:hidden}
+  .wthumb{width:74px;flex:none}
+  .wthumb .im{width:74px;height:88px;border-radius:9px;background:var(--tile);display:flex;align-items:center;justify-content:center}
+  .wthumb .im svg{width:60%;height:60%}
+  .wthumb .dt2{font-size:9.5px;color:var(--ink3);margin-top:4px;text-align:center}
+  .wadd{width:74px;height:88px;border-radius:9px;border:1px dashed var(--line);display:flex;align-items:center;justify-content:center;color:var(--ink3);font-size:20px}
+  .sectitle{font-size:11px;font-weight:660;color:var(--ink3);letter-spacing:.06em;padding:16px 20px 8px}
+
+  /* camera */
+  .cam{flex:1;background:#ECE9E2;position:relative;display:flex;align-items:center;justify-content:center;overflow:hidden}
+  .cam .sheet{width:250px;height:290px;background:#FBF9F5;border-radius:12px;box-shadow:0 10px 30px rgba(60,50,38,.14);display:flex;align-items:center;justify-content:center}
+  .cam .sheet svg{width:70%;height:70%}
+  .vf{position:absolute;inset:52px 40px 150px;border-radius:6px}
+  .vf i{position:absolute;width:26px;height:26px;border:2px solid rgba(255,255,255,.85)}
+  .vf i:nth-child(1){left:0;top:0;border-right:none;border-bottom:none;border-radius:6px 0 0 0}
+  .vf i:nth-child(2){right:0;top:0;border-left:none;border-bottom:none;border-radius:0 6px 0 0}
+  .vf i:nth-child(3){left:0;bottom:0;border-right:none;border-top:none;border-radius:0 0 0 6px}
+  .vf i:nth-child(4){right:0;bottom:0;border-left:none;border-top:none;border-radius:0 0 6px 0}
+  .camtip{position:absolute;left:0;right:0;bottom:118px;text-align:center;font-size:11.5px;color:#5C554A;line-height:1.6}
+  .cambottom{flex:none;background:#fff;padding:14px 20px 22px}
+  .filmstrip{display:flex;gap:7px;margin-bottom:16px;align-items:center}
+  .film{width:44px;height:52px;border-radius:7px;background:var(--tile);display:flex;align-items:center;justify-content:center}
+  .film svg{width:62%;height:62%}
+  .shutterRow{display:flex;align-items:center;justify-content:space-between}
+  .shutter{width:66px;height:66px;border-radius:33px;border:4px solid var(--ink);display:flex;align-items:center;justify-content:center}
+  .shutter div{width:50px;height:50px;border-radius:25px;background:var(--ink)}
+  .gallery{width:46px;height:46px;border-radius:10px;background:var(--soft);display:flex;align-items:center;justify-content:center;font-size:17px}
+
+  /* person page */
+  .phead{display:flex;flex-direction:column;align-items:center;padding:6px 20px 18px}
+  .avatar{width:66px;height:66px;border-radius:33px;background:#D9D2C6;color:#6B6152;display:flex;align-items:center;justify-content:center;font-size:23px;font-weight:640}
+  .pname{font-size:19px;font-weight:660;margin-top:11px}
+  .psub{font-size:11.5px;color:var(--ink3);margin-top:4px}
+  .stats{display:grid;grid-template-columns:repeat(3,1fr);gap:1px;background:var(--line);border-radius:12px;overflow:hidden;margin:0 20px}
+  .stat{background:#fff;padding:13px 10px;text-align:center}
+  .stat .n{font-size:17px;font-weight:660;letter-spacing:-.01em}
+  .stat .n small{font-size:10px;font-weight:500;color:var(--ink3);margin-left:1px}
+  .stat .l{font-size:10.5px;color:var(--ink3);margin-top:3px}
+  .delta{margin:10px 20px 0;font-size:11.5px;color:#4C7A55;background:#EDF3EC;border-radius:9px;padding:8px 12px}
+  .hlist{margin:0 20px}
+  .hitem{display:flex;justify-content:space-between;align-items:center;padding:12px 0;border-bottom:1px solid var(--line);font-size:13px}
+  .hitem .r{color:var(--ink3);font-size:11.5px;font-variant-numeric:tabular-nums}
+
+  /* chart */
+  .chartbox{margin:4px 20px 0;background:#fff;border:1px solid var(--line);border-radius:14px;padding:14px 10px 6px}
+  .chartbox svg{width:100%;height:auto;display:block}
+
+  /* settings */
+  .sect{margin-top:22px}
+  .sect .st{font-size:11px;font-weight:660;color:var(--ink3);letter-spacing:.06em;padding:0 22px 8px}
+  .list{background:#fff;margin:0 20px;border:1px solid var(--line);border-radius:14px;overflow:hidden}
+  .li{display:flex;align-items:center;justify-content:space-between;padding:15px 16px;border-bottom:1px solid var(--line);font-size:13.5px}
+  .li:last-child{border-bottom:none}
+  .li .chev{color:var(--ink3);font-size:15px}
+  .toggle{width:40px;height:24px;border-radius:12px;background:var(--ink);position:relative}
+  .toggle::after{content:"";position:absolute;right:3px;top:3px;width:18px;height:18px;border-radius:9px;background:#fff}
+  .storage{margin:14px 20px 0;font-size:11px;color:var(--ink3)}
+  .storagebar{height:6px;border-radius:3px;background:var(--line);margin-top:7px;overflow:hidden}
+  .storagebar div{height:100%;width:62%;background:var(--ink)}
+
+  /* forms */
+  .fld{margin:0 20px 0}
+  .fld label{display:block;font-size:11px;font-weight:660;color:var(--ink3);letter-spacing:.06em;padding:16px 0 7px}
+  .input{height:46px;border-radius:12px;background:var(--soft);display:flex;align-items:center;padding:0 14px;font-size:14.5px}
+  .input.ph{color:var(--ink3);font-size:14px}
+  .input .cur{width:1.5px;height:19px;background:var(--ink);margin-left:1px}
+  .input .unit{color:var(--ink3);font-size:12.5px;margin-left:6px}
+  .inline2{display:flex;gap:10px}
+  .inline2 .input{flex:1}
+  .picks{display:flex;gap:8px;flex-wrap:wrap}
+  .pick{padding:9px 15px;border-radius:11px;background:var(--soft);font-size:13px;color:var(--ink2)}
+  .pick.on{background:var(--ink);color:#fff;font-weight:600}
+  .avatarpick{display:flex;align-items:center;gap:14px;padding:6px 20px 2px}
+  .avbig{width:72px;height:72px;border-radius:36px;background:var(--soft);border:1px dashed var(--line);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;font-size:10px;color:var(--ink3)}
+  .avbig .p{font-size:19px;font-weight:300;line-height:1}
+  .avtip{flex:1;font-size:11px;line-height:1.7;color:var(--ink3)}
+  .emptynote{font-size:11px;line-height:1.7;color:var(--ink3);padding:7px 20px 0}
+  .partline{display:flex;align-items:center;gap:10px;padding:0 20px}
+  .partline .hr{flex:1;height:1px;background:var(--line)}
+  .partline span{font-size:10.5px;color:var(--ink3);letter-spacing:.08em}
+  .stickyhdr{margin-top:auto;background:#fff;border-top:1px solid var(--line);padding:12px 20px 28px}
+  .tinyinfo{font-size:10.5px;color:var(--ink3);line-height:1.7;padding:10px 20px 0}
+  .badge2{display:inline-flex;align-items:center;gap:4px;font-size:10px;font-weight:640;color:#4C7A55;background:#EDF3EC;border-radius:7px;padding:3px 7px}
+
+  /* 2-col compact measurement grid */
+  .ghdr{display:flex;align-items:center;justify-content:space-between;padding:12px 20px 7px}
+  .ghdr .t{font-size:10.5px;font-weight:660;color:var(--ink3);letter-spacing:.06em}
+  .ghdr .r{font-size:9.5px;color:var(--ink3)}
+  .grid2{display:grid;grid-template-columns:1fr 1fr;gap:7px 10px;margin:0 20px}
+  .cell .lb{font-size:10px;color:var(--ink3);margin-bottom:3px}
+  .cell .iv{height:34px;border-radius:10px;background:var(--soft);display:flex;align-items:center;padding:0 10px;font-size:13.5px;font-weight:560}
+  .cell .iv .u{font-size:11px;color:var(--ink3);font-weight:500;margin-left:3px}
+  .cell .iv.empty{color:var(--ink3);font-weight:400;font-size:13px;background:#FAF9F6;box-shadow:inset 0 0 0 1px var(--line)}
+  .cell .iv.empty .u{color:#C6C0B7}
+  .morelink{margin:12px 20px 0;font-size:11.5px;color:var(--ink2);background:var(--soft);border-radius:10px;padding:10px 13px;display:flex;justify-content:space-between;align-items:center}
+  .morelink .r{color:var(--ink3);font-size:13px}
+
+  /* compact 15-row table */
+  .tbl{margin:0 20px;background:#fff;border:1px solid var(--line);border-radius:13px;overflow:hidden}
+  .tbl .th{padding:9px 14px;background:var(--soft);font-size:9.5px;font-weight:660;color:var(--ink3);letter-spacing:.07em;display:flex;justify-content:space-between}
+  .mrow{padding:0 14px;height:33px;display:flex;justify-content:space-between;align-items:center;font-size:12.5px;border-bottom:1px solid var(--line)}
+  .mrow:last-child{border-bottom:0}
+  .mrow .v{display:flex;gap:13px;align-items:center;font-variant-numeric:tabular-nums}
+  .mrow .v b{font-weight:620;font-size:12.5px}
+  .mrow .v .pv{font-size:11px;color:var(--ink3)}
+  .mrow .v .dv{font-size:10.5px;min-width:22px;text-align:right}
+  .mrow .v .up{color:#A8574B}
+  .mrow .v .dn{color:#4C7A55}
+  .mrow .v .fl{font-size:11.5px;color:#C6C0B7}
+</style>
+</head>
+<body>
+
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <symbol id="tee" viewBox="0 0 100 100"><path fill="currentColor" d="M50 13 L29 19 L15 33 L23 45 L30 39 V88 H70 V39 L77 45 L85 33 L71 19 Z"/></symbol>
+  <symbol id="hoodie" viewBox="0 0 100 100"><path fill="currentColor" d="M50 11c-9 0-14 5-14 11v3L19 30 14 45l11 3 5-8v48h40V40l5 8 11-3-5-15-17-5v-3c0-6-5-11-14-11z"/><path fill="none" stroke="rgba(0,0,0,.13)" stroke-width="2" d="M34 62h32"/></symbol>
+  <symbol id="shirt" viewBox="0 0 100 100"><path fill="currentColor" d="M50 13 L33 19 L17 33 L25 46 L31 40 V88 H69 V40 L75 46 L83 33 L67 19 Z"/><path fill="none" stroke="rgba(0,0,0,.22)" stroke-width="1.7" d="M42 13 L50 27 L58 13"/><path stroke="rgba(0,0,0,.15)" stroke-width="1.4" d="M50 28v58"/></symbol>
+  <symbol id="knit" viewBox="0 0 100 100"><path fill="currentColor" d="M50 13 L25 17 L12 40 L21 46 L28 37 V87 H72 V37 L79 46 L88 40 L75 17 Z"/></symbol>
+  <symbol id="pants" viewBox="0 0 100 100"><path fill="currentColor" d="M33 12h34l3 76H57L50 44 43 88H30 Z"/></symbol>
+  <symbol id="jeans" viewBox="0 0 100 100"><path fill="currentColor" d="M33 12h34l3 76H57L50 44 43 88H30 Z"/><path fill="none" stroke="rgba(255,255,255,.28)" stroke-width="1.4" d="M34 20h32M50 22v18"/></symbol>
+  <symbol id="skirt" viewBox="0 0 100 100"><path fill="currentColor" d="M33 17h34l10 67H23 Z"/></symbol>
+  <symbol id="coat" viewBox="0 0 100 100"><path fill="currentColor" d="M50 12 L29 20 L20 52 V89 H80 V52 L71 20 Z"/><path stroke="rgba(255,255,255,.25)" stroke-width="1.6" d="M50 20v69M43 26 L50 44 57 26"/></symbol>
+  <symbol id="sneaker" viewBox="0 0 100 100"><path fill="currentColor" d="M13 71c1-9 7-19 18-23 8-3 13 3 20 6 8 3 25 4 30 12 2 3 2 6 2 9H13z"/><path fill="none" stroke="rgba(0,0,0,.16)" stroke-width="1.6" d="M31 56l6 10M41 54l5 9"/></symbol>
+  <symbol id="dress" viewBox="0 0 100 100"><path fill="currentColor" d="M40 14h20l4 26 14 48H22l14-48z"/></symbol>
+</svg>
+
+<div class="head">
+  <h1>明天穿什么 · 界面原型 v0.1</h1>
+  <p>第一版共 3 个底部 Tab 与 11 个关键界面。下方每屏配了该屏的设计意图，重点看两处：<b>衣橱网格</b>（决定相册好不好看）和<b>待确认队列</b>（决定自动识别可不可信）。所有衣物图形为占位示意，实际为抠图后的真实照片。</p>
+  <div class="legend">
+    <span><b style="background:#26231F"></b>主色 #26231F</span>
+    <span><b style="background:#F2F2F0"></b>图片底色 #F2F2F0</span>
+    <span><b style="background:#EAE6DF"></b>分隔线</span>
+    <span><b style="background:#8C6A4F"></b>上身图标记</span>
+  </div>
+</div>
+
+<div class="grid">
+
+  <!-- 1 -->
+  <figure>
+    <div class="cap"><span>01</span>衣橱 · 网格</div>
+    <div class="phone">
+      <div class="sb"><span>9:41</span><div class="dots"><span>●●●</span><span class="bar"></span></div></div>
+      <div class="body">
+        <div class="hdr"><h2>衣橱</h2><div class="addbtn"><span>＋</span>添加衣服</div></div>
+        <div class="roles">
+          <span class="role on">小李</span>
+          <span class="role">我</span>
+          <span class="role">妈妈</span>
+          <span class="role add">＋</span>
+        </div>
+        <div class="filters">
+          <span class="chip">全部类别 ⌄</span>
+          <span class="chip">全部季节 ⌄</span>
+          <span class="chip sq">⌕</span>
+        </div>
+        <div class="grid3">
+          <div class="tile"><div class="timg"><svg style="color:#9A9A96"><use href="#hoodie"/></svg><span class="badge">3 张</span></div><div class="tname">灰色卫衣</div></div>
+          <div class="tile"><div class="timg" style="background:#E6E3DC"><svg style="color:#FCFBF8"><use href="#shirt"/></svg></div><div class="tname">白衬衫</div></div>
+          <div class="tile"><div class="timg"><svg style="color:#3E3E44"><use href="#jeans"/></svg></div><div class="tname">黑牛仔裤</div></div>
+          <div class="tile"><div class="timg"><svg style="color:#D8C9B4"><use href="#knit"/></svg></div><div class="tname">米色针织</div></div>
+          <div class="tile"><div class="timg"><svg style="color:#C6AC86"><use href="#pants"/></svg></div><div class="tname">卡其长裤</div></div>
+          <div class="tile"><div class="timg"><svg style="color:#7A8CA0"><use href="#coat"/></svg><span class="badge">1 张</span></div><div class="tname">牛仔外套</div></div>
+          <div class="tile"><div class="timg"><svg style="color:#B4B0A7"><use href="#skirt"/></svg></div><div class="tname">灰色半裙</div></div>
+          <div class="tile"><div class="timg" style="background:#E6E3DC"><svg style="color:#F4F2ED"><use href="#sneaker"/></svg></div><div class="tname">白运动鞋</div></div>
+          <div class="tile"><div class="timg"><svg style="color:#33322F"><use href="#tee"/></svg></div><div class="tname">黑T恤</div></div>
+        </div>
+        <div class="tabbar">
+          <div class="tbi on"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><rect x="3" y="3" width="7" height="7" rx="1.6"/><rect x="14" y="3" width="7" height="7" rx="1.6"/><rect x="3" y="14" width="7" height="7" rx="1.6"/><rect x="14" y="14" width="7" height="7" rx="1.6"/></svg>衣橱</div>
+          <div class="tbi"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><circle cx="12" cy="8" r="3.6"/><path d="M4.8 20c.8-3.6 3.7-5.6 7.2-5.6s6.4 2 7.2 5.6"/></svg>角色</div>
+          <div class="tbi"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><circle cx="12" cy="12" r="3"/><path d="M12 3v2.4M12 18.6V21M3 12h2.4M18.6 12H21M5.6 5.6l1.7 1.7M16.7 16.7l1.7 1.7M18.4 5.6l-1.7 1.7M7.3 16.7l-1.7 1.7"/></svg>我的</div>
+        </div>
+      </div>
+    </div>
+    <p class="note"><b>为什么这样排：</b>角色标签放在标题下第一行——切换角色是最高频动作。网格 3 列、图片统一正方形、统一留白，是"相册整齐"的全部来源。衣物名 10.5px 弱化处理，让图先说话；"3 张"角标提示这件有上身图可看。</p>
+  </figure>
+
+  <!-- 2 -->
+  <figure>
+    <div class="cap"><span>02</span>待确认队列</div>
+    <div class="phone">
+      <div class="sb"><span>9:41</span><div class="dots"><span>●●●</span><span class="bar"></span></div></div>
+      <div class="body">
+        <div class="hdr"><div class="back">‹</div><h2 style="font-size:19px">待确认</h2><div class="step">3 / 12</div></div>
+        <div class="bigimg">
+          <span class="lowconf">类别待确认</span>
+          <svg style="color:#9A9A96"><use href="#hoodie"/></svg>
+        </div>
+        <div style="display:flex;justify-content:center;padding:14px 0 0">
+          <div class="segtoggle"><span class="on">处理图</span><span>原图</span></div>
+        </div>
+        <div class="card" style="margin-top:14px">
+          <div class="row"><span class="k">类别</span><span class="v">上装 · 卫衣 <span style="color:#8A5A18;font-size:11px">修改</span></span></div>
+          <div class="row"><span class="k">主色</span><span class="v"><i class="sw" style="background:#9A9A96"></i>中灰</span></div>
+          <div class="row"><span class="k">季节</span><span class="v">四季通用</span></div>
+          <div class="row"><span class="k">名称</span><span class="v">灰色卫衣 <span style="color:var(--ink3);font-size:11px">自动</span></span></div>
+        </div>
+        <div style="flex:1"></div>
+        <div class="btnrow">
+          <div class="btn ghost" style="flex:.6">删除</div>
+          <div class="btn pri">确认并下一张</div>
+        </div>
+        <div class="hint">已确认 9 件 · 还差 12 件</div>
+        <div style="height:20px"></div>
+      </div>
+    </div>
+    <p class="note"><b>这是全产品最关键的屏。</b>拍完不直接进衣橱，必须先过一遍。低置信度的类别用橙色角标顶在图左上角，一眼能扫到；名称是自动拼的（主色＋二级类别），用户不打字也能确认。底部主按钮占满，鼓励快速划过去。</p>
+  </figure>
+
+  <!-- 3 -->
+  <figure>
+    <div class="cap"><span>03</span>衣服详情</div>
+    <div class="phone">
+      <div class="sb"><span>9:41</span><div class="dots"><span>●●●</span><span class="bar"></span></div></div>
+      <div class="body">
+        <div class="hdr"><div class="back">‹</div><h2 style="font-size:19px"></h2><div class="act">···</div></div>
+        <div class="hero">
+          <svg style="color:#9A9A96"><use href="#hoodie"/></svg>
+          <div class="dotsrow"><i class="dt on"></i><i class="dt"></i><i class="dt worn"></i><i class="dt worn"></i><i class="dt worn"></i></div>
+        </div>
+        <div style="display:flex;justify-content:center;padding:14px 0 4px">
+          <div class="segtoggle"><span class="on">平铺图</span><span>原图</span></div>
+        </div>
+        <div style="padding:14px 20px 0;display:flex;align-items:baseline;justify-content:space-between">
+          <div style="font-size:18px;font-weight:660">灰色卫衣</div>
+          <div style="font-size:12px;color:var(--ink3)">编辑</div>
+        </div>
+        <div class="card" style="margin-top:12px">
+          <div class="row"><span class="k">类别</span><span class="v">上装 · 卫衣</span></div>
+          <div class="row"><span class="k">主色</span><span class="v"><i class="sw" style="background:#9A9A96"></i>中灰</span></div>
+          <div class="row"><span class="k">季节</span><span class="v">春 · 秋</span></div>
+        </div>
+        <div class="sectitle">上身效果 · 3 张</div>
+        <div class="wornstrip">
+          <div class="wthumb"><div class="im"><svg style="color:#9A9A96"><use href="#hoodie"/></svg></div><div class="dt2">2026-10-12</div></div>
+          <div class="wthumb"><div class="im"><svg style="color:#9A9A96"><use href="#hoodie"/></svg></div><div class="dt2">2025-11-03</div></div>
+          <div class="wthumb"><div class="im"><svg style="color:#9A9A96"><use href="#hoodie"/></svg></div><div class="dt2">2025-03-18</div></div>
+          <div class="wadd">＋</div>
+        </div>
+        <div style="flex:1"></div>
+        <div class="btnrow"><div class="btn ghost">删除这件</div></div>
+      </div>
+    </div>
+    <p class="note"><b>两块图在同一轮播里</b>：圆点前两个是平铺图（处理版在前作封面，可切原图），后三个褐色圆点是上身图，按日期倒序。这样既保留"目录感"，又不用多点一次才看到真实上身照。上身图只加日期，不做任何处理。</p>
+  </figure>
+
+  <!-- 4 -->
+  <figure>
+    <div class="cap"><span>04</span>批量拍照</div>
+    <div class="phone">
+      <div class="sb"><span>9:41</span><div class="dots"><span>●●●</span><span class="bar"></span></div></div>
+      <div class="body">
+        <div class="hdr"><div class="back">✕</div><h2 style="font-size:19px">拍摄</h2><div class="step">已拍 6 张</div></div>
+        <div class="cam">
+          <div class="vf"><i></i><i></i><i></i><i></i></div>
+          <div class="sheet"><svg style="color:#FBFAF7;filter:drop-shadow(0 2px 3px rgba(0,0,0,.12))"><use href="#shirt"/></svg></div>
+          <div class="camtip">把衣服平铺在浅色背景上，顺光照<br><span style="color:#8A8275">这样抠图边缘最干净</span></div>
+        </div>
+        <div class="cambottom">
+          <div class="filmstrip">
+            <div class="film"><svg style="color:#9A9A96"><use href="#hoodie"/></svg></div>
+            <div class="film"><svg style="color:#3E3E44"><use href="#jeans"/></svg></div>
+            <div class="film"><svg style="color:#C6AC86"><use href="#pants"/></svg></div>
+            <div class="film"><svg style="color:#B4B0A7"><use href="#skirt"/></svg></div>
+            <div class="film"><svg style="color:#33322F"><use href="#tee"/></svg></div>
+            <div class="film" style="color:var(--ink3);font-size:11px;background:var(--soft)">＋3</div>
+          </div>
+          <div class="shutterRow">
+            <div class="gallery">▤</div>
+            <div class="shutter"><div></div></div>
+            <div class="gallery" style="background:var(--ink);color:#fff;font-size:13px">完成</div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <p class="note"><b>拍摄提示不是装饰，是精度来源。</b>平铺、纯色底、顺光这三句写死在取景框里，抠图准确率的提升比换模型大得多。底部缩略图立即回显＋可继续拍，让人有"在进货"的手感。左下来自系统相册，支持一次性多选。</p>
+  </figure>
+
+  <!-- 5 -->
+  <figure>
+    <div class="cap"><span>05</span>角色列表</div>
+    <div class="phone">
+      <div class="sb"><span>9:41</span><div class="dots"><span>●●●</span><span class="bar"></span></div></div>
+      <div class="body">
+        <div class="hdr"><h2>角色</h2><div class="act">＋</div></div>
+        <div style="padding:0 20px">
+          <div class="card" style="margin:0 0 12px;display:flex;align-items:center;gap:14px;padding:16px">
+            <div class="avatar" style="width:52px;height:52px;font-size:19px">李</div>
+            <div style="flex:1">
+              <div style="font-size:15.5px;font-weight:640">小李</div>
+              <div style="font-size:11.5px;color:var(--ink3);margin-top:4px">23 件衣服 · 上次记录 10-12</div>
+            </div>
+            <div class="chev" style="color:var(--ink3)">›</div>
+          </div>
+          <div class="card" style="margin:0 0 12px;display:flex;align-items:center;gap:14px;padding:16px">
+            <div class="avatar" style="width:52px;height:52px;font-size:19px;background:#CFD5CC;color:#4F5C4C">我</div>
+            <div style="flex:1">
+              <div style="font-size:15.5px;font-weight:640">我</div>
+              <div style="font-size:11.5px;color:var(--ink3);margin-top:4px">41 件衣服 · 上次记录 09-28</div>
+            </div>
+            <div class="chev" style="color:var(--ink3)">›</div>
+          </div>
+          <div style="border:1px dashed var(--line);border-radius:14px;padding:17px;text-align:center;font-size:13px;color:var(--ink3)">＋ 添加角色</div>
+        </div>
+        <div style="flex:1"></div>
+        <div class="hint" style="padding-bottom:34px">长按卡片可改名或调整顺序</div>
+      </div>
+    </div>
+    <p class="note"><b>角色是数据的分界线，也是一级入口。</b>卡片上直接给出"多少件衣服 + 上次记录时间"两个数——后者是提醒身材档案别荒废的唯一钩子。这里的人员表和衣橱顶端标签读的是同一份数据，以后加第三个人不用改结构。</p>
+  </figure>
+
+  <!-- 6 -->
+  <figure>
+    <div class="cap"><span>06</span>角色主页 · 身材档案</div>
+    <div class="phone">
+      <div class="sb"><span>9:41</span><div class="dots"><span>●●●</span><span class="bar"></span></div></div>
+      <div class="body">
+        <div class="hdr"><div class="back">‹</div><h2 style="font-size:19px">小李</h2><div class="act">···</div></div>
+        <div class="phead" style="padding-top:0">
+          <div class="avatar">李</div>
+          <div class="pname">小李</div>
+          <div class="psub">23 件衣服 · 4 次身材记录</div>
+        </div>
+        <div style="display:flex;justify-content:space-between;align-items:baseline;padding:0 20px 10px">
+          <div style="font-size:11px;font-weight:660;color:var(--ink3);letter-spacing:.06em">最新身材 · 2026-10-12</div>
+          <div style="font-size:11.5px;color:var(--ink3)">全部历史 ›</div>
+        </div>
+        <div class="stats">
+          <div class="stat"><div class="n">165<small>cm</small></div><div class="l">身高</div></div>
+          <div class="stat"><div class="n">54.2<small>kg</small></div><div class="l">体重</div></div>
+          <div class="stat"><div class="n">68<small>cm</small></div><div class="l">腰围</div></div>
+          <div class="stat"><div class="n">86<small>cm</small></div><div class="l">胸围</div></div>
+          <div class="stat"><div class="n">92<small>cm</small></div><div class="l">臀围</div></div>
+          <div class="stat"><div class="n">52<small>cm</small></div><div class="l">大腿围</div></div>
+        </div>
+        <div class="delta">↓ 较上次 体重 −1.2kg · 腰围 −1cm</div>
+
+        <div style="margin:12px 20px 0;background:#fff;border:1px solid var(--line);border-radius:12px;padding:11px 14px">
+          <div style="display:flex;justify-content:space-between;align-items:center;padding-bottom:8px">
+            <span style="font-size:10.5px;color:var(--ink3);letter-spacing:.05em">其余 10 项</span>
+            <span style="font-size:11px;color:var(--ink3)">全部 16 项 ›</span>
+          </div>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:7px 26px;font-size:11.5px">
+            <div style="display:flex;justify-content:space-between"><span style="color:var(--ink3)">下胸围</span><span style="color:#C6C0B7">未填</span></div>
+            <div style="display:flex;justify-content:space-between"><span style="color:var(--ink3)">肩宽</span><span>38</span></div>
+            <div style="display:flex;justify-content:space-between"><span style="color:var(--ink3)">背长</span><span style="color:#C6C0B7">未填</span></div>
+            <div style="display:flex;justify-content:space-between"><span style="color:var(--ink3)">小腿围</span><span style="color:#C6C0B7">未填</span></div>
+            <div style="display:flex;justify-content:space-between"><span style="color:var(--ink3)">臂围</span><span style="color:#C6C0B7">未填</span></div>
+            <div style="display:flex;justify-content:space-between"><span style="color:var(--ink3)">颈围</span><span style="color:#C6C0B7">未填</span></div>
+            <div style="display:flex;justify-content:space-between"><span style="color:var(--ink3)">臂长</span><span style="color:#C6C0B7">未填</span></div>
+            <div style="display:flex;justify-content:space-between"><span style="color:var(--ink3)">腿长</span><span style="color:#C6C0B7">未填</span></div>
+            <div style="display:flex;justify-content:space-between"><span style="color:var(--ink3)">鞋码</span><span style="color:#C6C0B7">未填</span></div>
+            <div style="display:flex;justify-content:space-between"><span style="color:var(--ink3)">脚长</span><span style="color:#C6C0B7">未填</span></div>
+          </div>
+        </div>
+
+        <div class="btnrow" style="padding:12px 20px 6px">
+          <div class="btn pri">记录一次</div>
+          <div class="btn ghost">看趋势</div>
+        </div>
+        <div class="sectitle" style="padding-top:8px">历史记录</div>
+        <div class="hlist">
+          <div class="hitem"><span>2026-10-12</span><span class="r">54.2 kg · 腰 68</span></div>
+          <div class="hitem"><span>2026-08-30</span><span class="r">55.4 kg · 腰 69</span></div>
+        </div>
+        <div style="flex:1"></div>
+        <div class="btnrow" style="padding-bottom:4px"><div class="btn ghost">进入 TA 的衣橱 →</div></div>
+        <div style="height:14px"></div>
+      </div>
+    </div>
+    <p class="note"><b>字段加到 16 项，但首屏只给 6 格大数字。</b>身高、体重、腰围、胸围、臀围、大腿围——这六项是买衣服真正会看的，所以给大字号；其余 10 项（下胸围、肩宽、背长、小腿围、臂围、颈围、臂长、腿长、鞋码、脚长）收进一张小卡，<b>填没填一眼看得出来</b>，没填的用浅灰"未填"而不是留空，否则用户分不清是"没这项"还是"漏了"。卡片右上角"全部 16 项"是出口，点进去是完整对照表。</p>
+  </figure>
+
+  <!-- 7 -->
+  <figure>
+    <div class="cap"><span>07</span>身材趋势</div>
+    <div class="phone">
+      <div class="sb"><span>9:41</span><div class="dots"><span>●●●</span><span class="bar"></span></div></div>
+      <div class="body">
+        <div class="hdr"><div class="back">‹</div><h2 style="font-size:19px">身材趋势</h2><div class="step">小李</div></div>
+        <div class="filters" style="padding-top:6px">
+          <span class="role on" style="padding:6px 14px;font-size:12px">体重</span>
+          <span class="role" style="padding:6px 14px;font-size:12px">胸围</span>
+          <span class="role" style="padding:6px 14px;font-size:12px">腰围</span>
+          <span class="role" style="padding:6px 14px;font-size:12px">臀围</span>
+        </div>
+        <div class="chartbox">
+          <svg viewBox="0 0 320 190">
+            <g stroke="#EFECE6" stroke-width="1">
+              <line x1="16" y1="40" x2="308" y2="40"/>
+              <line x1="16" y1="80" x2="308" y2="80"/>
+              <line x1="16" y1="120" x2="308" y2="120"/>
+              <line x1="16" y1="160" x2="308" y2="160"/>
+            </g>
+            <g fill="#A29C93" font-size="8.5" font-family="inherit">
+              <text x="4" y="43">57</text>
+              <text x="4" y="83">55.5</text>
+              <text x="4" y="123">54</text>
+              <text x="4" y="163">52.5</text>
+            </g>
+            <path d="M44 40 L100 58 L156 82 L212 67 L268 91 L304 118 L304 170 L44 170 Z" fill="rgba(38,35,31,.05)"/>
+            <polyline points="44,40 100,58 156,82 212,67 268,91 304,118" fill="none" stroke="#26231F" stroke-width="2" stroke-linejoin="round"/>
+            <circle cx="44" cy="40" r="3" fill="#fff" stroke="#26231F" stroke-width="2"/>
+            <circle cx="100" cy="58" r="3" fill="#fff" stroke="#26231F" stroke-width="2"/>
+            <circle cx="156" cy="82" r="3" fill="#fff" stroke="#26231F" stroke-width="2"/>
+            <circle cx="212" cy="67" r="3" fill="#fff" stroke="#26231F" stroke-width="2"/>
+            <circle cx="268" cy="91" r="3" fill="#fff" stroke="#26231F" stroke-width="2"/>
+            <circle cx="304" cy="118" r="4" fill="#26231F"/>
+            <circle cx="304" cy="118" r="9" fill="none" stroke="#26231F" stroke-opacity=".2" stroke-width="1"/>
+            <g fill="#A29C93" font-size="8.5" font-family="inherit" text-anchor="middle">
+              <text x="44" y="184">3月</text><text x="100" y="184">5月</text><text x="156" y="184">7月</text>
+              <text x="212" y="184">8月</text><text x="268" y="184">9月</text><text x="304" y="184">10月</text>
+            </g>
+          </svg>
+        </div>
+        <div style="display:flex;justify-content:space-between;padding:14px 22px 0">
+          <div><div style="font-size:11px;color:var(--ink3)">近 7 个月</div><div style="font-size:19px;font-weight:660;margin-top:2px">−2.6<small style="font-size:11px;font-weight:500;color:var(--ink3)"> kg</small></div></div>
+          <div style="text-align:right"><div style="font-size:11px;color:var(--ink3)">当前</div><div style="font-size:19px;font-weight:660;margin-top:2px">54.2<small style="font-size:11px;font-weight:500;color:var(--ink3)"> kg</small></div></div>
+        </div>
+        <div class="sectitle">记录</div>
+        <div class="hlist">
+          <div class="hitem"><span>2026-10-12</span><span class="r">54.2 kg</span></div>
+          <div class="hitem"><span>2026-08-30</span><span class="r">55.4 kg</span></div>
+          <div class="hitem"><span>2026-05-06</span><span class="r">56.8 kg</span></div>
+        </div>
+      </div>
+    </div>
+    <p class="note"><b>没有趋势图，档案就只是一张表。</b>折线只画一条（当前选中的指标），下面配两个关键数：区间变化量和当前值。允许只记体重，其他维度空着也能正常出图——这决定了用户愿不愿意坚持记。</p>
+  </figure>
+
+  <!-- 8 -->
+  <figure>
+    <div class="cap"><span>08</span>我的 · 数据与设置</div>
+    <div class="phone">
+      <div class="sb"><span>9:41</span><div class="dots"><span>●●●</span><span class="bar"></span></div></div>
+      <div class="body">
+        <div class="hdr"><h2>我的</h2><div class="act"></div></div>
+        <div class="sect" style="margin-top:0">
+          <div class="st">数据</div>
+          <div class="list">
+            <div class="li"><span>导出备份</span><span class="chev">›</span></div>
+            <div class="li"><span>导入恢复</span><span class="chev">›</span></div>
+            <div class="li"><span>原图同步到系统相册</span><div class="toggle"></div></div>
+          </div>
+          <div class="storage">已用 386 MB · 64 件衣服 132 张图
+            <div class="storagebar"><div></div></div>
+          </div>
+        </div>
+        <div class="sect">
+          <div class="st">衣橱</div>
+          <div class="list">
+            <div class="li"><span>分类体系</span><span class="chev">›</span></div>
+            <div class="li"><span>图片底色</span><span style="color:var(--ink3);font-size:12.5px">浅灰 · #F2F2F0 ›</span></div>
+          </div>
+        </div>
+        <div class="sect">
+          <div class="st">关于</div>
+          <div class="list">
+            <div class="li"><span>版本</span><span style="color:var(--ink3);font-size:12.5px">1.0.0</span></div>
+          </div>
+        </div>
+        <div style="flex:1"></div>
+        <div class="hint" style="padding-bottom:34px">「明天穿什么」· 两个人的衣橱</div>
+      </div>
+    </div>
+    <p class="note"><b>数据页只放必要项。</b>导出和导入必须成对出现——只能导不能导回是半成品。"原图同步到系统相册"默认打开，是换手机不丢件的最后一道保险。存储条给出实际体积，让人对"还能录多少"有数。</p>
+  </figure>
+
+  <!-- 9 -->
+  <figure>
+    <div class="cap"><span>09</span>分类体系 · 自定义二级类别</div>
+    <div class="phone">
+      <div class="sb"><span>9:41</span><div class="dots"><span>●●●</span><span class="bar"></span></div></div>
+      <div class="body">
+        <div class="hdr"><div class="back">‹</div><h2 style="font-size:19px">分类体系</h2><div class="act">＋</div></div>
+        <div style="padding:0 20px 14px;font-size:11.5px;line-height:1.7;color:var(--ink3)">一级类别固定不变，二级类别可以自己增删。删掉某个二级类别不会删衣服，那些衣服会退回到一级类别。</div>
+
+        <div style="margin:0 20px;background:#fff;border:1px solid var(--line);border-radius:14px;overflow:hidden">
+          <!-- 上装 展开 -->
+          <div style="padding:14px 16px 4px;display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid var(--line)">
+            <span style="font-size:13.5px;font-weight:640">上装</span>
+            <span style="font-size:11.5px;color:var(--ink3)">18 件 · 7 个二级 ›</span>
+          </div>
+          <div style="padding:12px 16px 16px;display:flex;flex-wrap:wrap;gap:7px;border-bottom:1px solid var(--line)">
+            <span style="padding:6px 11px;border-radius:13px;background:var(--soft);font-size:12px;color:var(--ink2)">短袖T恤</span>
+            <span style="padding:6px 11px;border-radius:13px;background:var(--soft);font-size:12px;color:var(--ink2)">长袖T恤</span>
+            <span style="padding:6px 11px;border-radius:13px;background:var(--soft);font-size:12px;color:var(--ink2)">衬衫</span>
+            <span style="padding:6px 11px;border-radius:13px;background:var(--soft);font-size:12px;color:var(--ink2)">卫衣</span>
+            <span style="padding:6px 11px;border-radius:13px;background:var(--soft);font-size:12px;color:var(--ink2)">针织衫</span>
+            <span style="padding:6px 11px;border-radius:13px;background:var(--soft);font-size:12px;color:var(--ink2)">POLO</span>
+            <span style="padding:6px 11px;border-radius:13px;border:1px solid #D9CFC2;background:#FBF7F1;font-size:12px;color:#8C6A4F;display:inline-flex;align-items:center;gap:5px">背心<i style="font-style:normal;font-size:13px;color:#B9A48E">×</i></span>
+            <span style="padding:6px 11px;border-radius:13px;border:1px dashed var(--line);font-size:12px;color:var(--ink3)">＋ 新增</span>
+          </div>
+
+          <div style="padding:13px 16px;display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid var(--line)">
+            <span style="font-size:13.5px">下装</span><span style="font-size:11.5px;color:var(--ink3)">21 件 · 5 个 ›</span>
+          </div>
+          <div style="padding:13px 16px;display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid var(--line)">
+            <span style="font-size:13.5px">连衣裙</span><span style="font-size:11.5px;color:var(--ink3)">6 件 · 2 个 ›</span>
+          </div>
+          <div style="padding:13px 16px;display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid var(--line)">
+            <span style="font-size:13.5px">外套</span><span style="font-size:11.5px;color:var(--ink3)">9 件 · 4 个 ›</span>
+          </div>
+          <div style="padding:13px 16px;display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid var(--line)">
+            <span style="font-size:13.5px">鞋</span><span style="font-size:11.5px;color:var(--ink3)">8 件 · 4 个 ›</span>
+          </div>
+          <div style="padding:13px 16px;display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid var(--line)">
+            <span style="font-size:13.5px">包</span><span style="font-size:11.5px;color:var(--ink3)">3 件 · 3 个 ›</span>
+          </div>
+          <div style="padding:13px 16px;display:flex;align-items:center;justify-content:space-between">
+            <span style="font-size:13.5px">配饰</span><span style="font-size:11.5px;color:var(--ink3)">5 件 · 4 个 ›</span>
+          </div>
+        </div>
+
+        <div style="padding:16px 20px 0;font-size:11px;font-weight:660;color:var(--ink3);letter-spacing:.06em">我自建的</div>
+        <div style="margin:8px 20px 0;background:#fff;border:1px solid var(--line);border-radius:14px;overflow:hidden">
+          <div style="padding:13px 16px;display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid var(--line)">
+            <div><span style="font-size:13px">背心</span><span style="font-size:11px;color:var(--ink3);margin-left:7px">上装 · 4 件</span></div>
+            <span style="font-size:11.5px;color:var(--ink3)">改名 · 删除</span>
+          </div>
+          <div style="padding:13px 16px;display:flex;align-items:center;justify-content:space-between">
+            <div><span style="font-size:13px">吊带</span><span style="font-size:11px;color:var(--ink3);margin-left:7px">上装 · 2 件</span></div>
+            <span style="font-size:11.5px;color:var(--ink3)">改名 · 删除</span>
+          </div>
+        </div>
+
+        <div style="padding:14px 20px 0;font-size:11px;line-height:1.75;color:var(--ink3)">
+          褐色标签是自建的二级类别，可以删除或改名；灰色标签是内置的，只能改名。<br>改名不影响已入库的衣服，它们跟着二级类别的 id 走。
+        </div>
+
+        <div style="flex:1"></div>
+        <div class="hint" style="padding-bottom:34px">新增的类别会立刻出现在拍照后的自动识别里</div>
+      </div>
+    </div>
+    <p class="note"><b>给"体系装不下她衣柜"留一个出口。</b>内置 7 个一级、26 个二级覆盖大多数人，但总会有"背心""马甲""吊带"这种漏网的。允许自建二级类别，且自建项自动参与自动识别——这条决定了这个 App 是用三个月就卡住，还是能一直用下去。<b>删除类别不删衣服</b>，衣服退回一级，这个安全网必须有，否则用户不敢碰这个页面。</p>
+  </figure>
+
+  <!-- 10 -->
+  <figure>
+    <div class="cap"><span>10</span>添加角色</div>
+    <div class="phone">
+      <div class="sb"><span>9:41</span><div class="dots"><span>●●●</span><span class="bar"></span></div></div>
+      <div class="body">
+        <div class="hdr"><div class="back txt">取消</div><h2 style="font-size:17px;font-weight:640">新角色</h2><div class="act" style="width:auto;font-size:13px;font-weight:640;color:var(--ink2)">存下</div></div>
+
+        <div class="avatarpick">
+          <div class="avbig"><span class="p">＋</span><span>选头像</span></div>
+          <div class="avtip">不选也行，会用名字第一个字自动生成。<br>头像只在这一台手机上，不会上传。</div>
+        </div>
+
+        <div class="fld">
+          <label>名字</label>
+          <div class="input">小李<span class="cur"></span></div>
+        </div>
+
+        <div class="partline" style="padding-top:26px"><div class="hr"></div><span>基础数据 · 可留空</span><div class="hr"></div></div>
+
+        <div class="fld">
+          <div class="inline2">
+            <div>
+              <label>身高</label>
+              <div class="input">165<span class="unit">cm</span></div>
+            </div>
+            <div>
+              <label>体重</label>
+              <div class="input ph">未填<span class="unit">kg</span></div>
+            </div>
+          </div>
+        </div>
+
+        <div class="emptynote">填了身高，之后每次记录只需补体重和三围；不填也能先建角色，衣服照样能录。</div>
+
+        <div style="flex:1"></div>
+        <div class="tinyinfo">一个角色 = 一个独立衣橱。不同角色的衣服互不干扰，切换时网格只显示当前角色的。</div>
+        <div class="stickyhdr">
+          <div class="btn pri">建好，去添加衣服</div>
+        </div>
+      </div>
+    </div>
+    <p class="note"><b>表单只问两件必须知道的事：叫什么、多高。</b>没有任何"用途分类"字段——角色之间的关系不产生任何权限制约，加了就是纯装饰。身高体重标着"可留空"是这页最重要的一句，它决定了用户是"三秒建好去拍照"还是"卡在填表这页就退出"。<b>主按钮直接写"建好，去添加衣服"</b>，把下一步动作说进按钮里，而不是一个没有信息量的"保存"。头像保持虚线框占位，明确告诉人"这步可以跳过"。</p>
+  </figure>
+
+  <!-- 11 -->
+  <figure>
+    <div class="cap"><span>11</span>记录一次身材</div>
+    <div class="phone">
+      <div class="sb"><span>9:41</span><div class="dots"><span>●●●</span><span class="bar"></span></div></div>
+      <div class="body">
+        <div class="hdr"><div class="back txt">取消</div><h2 style="font-size:17px;font-weight:640">记录身材</h2><div class="act" style="width:auto;font-size:13px;font-weight:640;color:var(--ink2)">存下</div></div>
+        <div style="padding:0 20px 6px;font-size:11.5px;color:var(--ink3)">小李 · 上次记录 2026-10-12</div>
+
+        <div class="fld">
+          <div class="inline2">
+            <div>
+              <label>日期</label>
+              <div class="input" style="justify-content:space-between;font-size:13.5px">2026-10-31<span style="color:var(--ink3);font-size:11px">今天</span></div>
+            </div>
+            <div>
+              <label>体重 <span style="font-weight:500;letter-spacing:0;color:#A29C93">必填</span></label>
+              <div class="input" style="font-size:17px;font-weight:640;justify-content:space-between">54.2<span class="unit" style="font-size:11.5px">kg</span></div>
+            </div>
+          </div>
+        </div>
+
+        <div class="ghdr" style="padding-top:18px">
+          <span class="t">躯干</span>
+          <span class="r">全部选填 · 量了哪个填哪个</span>
+        </div>
+        <div class="grid2">
+          <div class="cell"><div class="lb">胸围</div><div class="iv">86<span class="u">cm</span></div></div>
+          <div class="cell"><div class="lb">下胸围</div><div class="iv empty">未填<span class="u">cm</span></div></div>
+          <div class="cell"><div class="lb">腰围</div><div class="iv">68<span class="u">cm</span><span style="margin-left:auto;font-size:10px;color:#4C7A55">−1</span></div></div>
+          <div class="cell"><div class="lb">臀围</div><div class="iv empty">未填<span class="u">cm</span></div></div>
+          <div class="cell"><div class="lb">肩宽</div><div class="iv empty">未填<span class="u">cm</span></div></div>
+          <div class="cell"><div class="lb">背长</div><div class="iv empty">未填<span class="u">cm</span></div></div>
+        </div>
+
+        <div class="ghdr">
+          <span class="t">四肢</span>
+          <span class="r">臂围/大腿围对选袖子裤子有用</span>
+        </div>
+        <div class="grid2">
+          <div class="cell"><div class="lb">大腿围</div><div class="iv">52<span class="u">cm</span></div></div>
+          <div class="cell"><div class="lb">小腿围</div><div class="iv empty">未填<span class="u">cm</span></div></div>
+          <div class="cell"><div class="lb">臂围</div><div class="iv empty">未填<span class="u">cm</span></div></div>
+          <div class="cell"><div class="lb">颈围</div><div class="iv empty">未填<span class="u">cm</span></div></div>
+          <div class="cell"><div class="lb">臂长</div><div class="iv empty">未填<span class="u">cm</span></div></div>
+          <div class="cell"><div class="lb">腿长</div><div class="iv empty">未填<span class="u">cm</span></div></div>
+        </div>
+
+        <div class="ghdr"><span class="t">脚</span><span class="r">会用在鞋的属性里</span></div>
+        <div class="grid2">
+          <div class="cell"><div class="lb">鞋码（中国码）</div><div class="iv empty">未填<span class="u">码</span></div></div>
+          <div class="cell"><div class="lb">脚长</div><div class="iv empty">未填<span class="u">mm</span></div></div>
+        </div>
+
+        <div style="flex:1"></div>
+        <div class="tinyinfo">这次填了 4 / 15 项 · 身高在角色档案里，不用每次重复</div>
+        <div class="stickyhdr">
+          <div class="btn pri">存下这次记录</div>
+        </div>
+      </div>
+    </div>
+    <p class="note"><b>16 项全部选填，只有体重和日期是必填。</b>这是这个功能能用起来的唯一前提——量三围比站上体重秤麻烦十倍，逼用户填全，他就不记了。分组顺序按"人怎么量"排：先躯干、再四肢、最后脚，和脱衣服的顺序一致。<b>每组标题右边不写废话，写这项数据的用途</b>（"臂围/大腿围对选袖子裤子有用"），让人知道量了不是白量。<b>底部实时显示本次填了几项</b>（这次填了 4/15 项），比进度条更具体，也不会让人有"必须填满"的压力——15 是因为身高只在角色档案里填一次，不重复问。只填体重也能存，那就是一条合法记录。</p>
+  </figure>
+
+  <!-- 12 -->
+  <figure>
+    <div class="cap"><span>12</span>身材数据 · 全部 16 项</div>
+    <div class="phone">
+      <div class="sb"><span>9:41</span><div class="dots"><span>●●●</span><span class="bar"></span></div></div>
+      <div class="body">
+        <div class="hdr"><div class="back">‹</div><h2 style="font-size:19px">全部身材数据</h2><div class="act">···</div></div>
+        <div style="padding:0 20px 10px;font-size:11.5px;color:var(--ink3)">2026-10-12 那次记录 · 未填的项一直保留空位</div>
+
+        <div class="tbl">
+          <div class="th"><span>项目</span><span style="margin-right:2px">当次 / 上次 / 变化</span></div>
+
+          <div class="mrow"><span>身高</span><span class="v"><b>165</b><span class="pv">165</span><span class="dv" style="color:var(--ink3)">—</span></span></div>
+          <div class="mrow"><span>体重</span><span class="v"><b>54.2</b><span class="pv">55.4</span><span class="dv dn">−1.2</span></span></div>
+          <div class="mrow"><span>胸围</span><span class="v"><b>86</b><span class="pv">86</span><span class="dv" style="color:var(--ink3)">—</span></span></div>
+          <div class="mrow"><span>下胸围</span><span class="v"><span class="fl">未填</span></span></div>
+          <div class="mrow"><span>腰围</span><span class="v"><b>68</b><span class="pv">69</span><span class="dv dn">−1</span></span></div>
+          <div class="mrow"><span>臀围</span><span class="v"><span class="fl">未填</span></span></div>
+          <div class="mrow"><span>肩宽</span><span class="v"><span class="fl">未填</span></span></div>
+          <div class="mrow"><span>背长</span><span class="v"><span class="fl">未填</span></span></div>
+          <div class="mrow"><span>大腿围</span><span class="v"><b>52</b><span class="pv">—</span><span class="dv" style="color:var(--ink3)">—</span></span></div>
+          <div class="mrow"><span>小腿围</span><span class="v"><span class="fl">未填</span></span></div>
+          <div class="mrow"><span>臂围</span><span class="v"><span class="fl">未填</span></span></div>
+          <div class="mrow"><span>颈围</span><span class="v"><span class="fl">未填</span></span></div>
+          <div class="mrow"><span>臂长</span><span class="v"><span class="fl">未填</span></span></div>
+          <div class="mrow"><span>腿长</span><span class="v"><span class="fl">未填</span></span></div>
+          <div class="mrow"><span>鞋码</span><span class="v"><span class="fl">未填</span></span></div>
+          <div class="mrow"><span>脚长</span><span class="v"><span class="fl">未填</span></span></div>
+        </div>
+
+        <div class="morelink" style="margin-top:10px">这 16 项分别怎么量<span class="r">图解 ›</span></div>
+
+        <div style="flex:1"></div>
+        <div class="btnrow" style="padding:0 20px 4px"><div class="btn ghost">编辑这次记录</div></div>
+        <div style="height:14px"></div>
+      </div>
+    </div>
+    <p class="note"><b>完整对照表用三列：当次 / 上次 / 变化。</b>一次记录看的是单点数值，但真正想知道的是"变了没有"，所以把上次值和差值一起摆出来，不用来回翻页。<b>未填的项不隐藏、也不整行置灰</b>，而是保留行、写"未填"——这样这张表永远稳定在 16 行，下次想补哪项，位置是固定的，不用重新找。变化列用颜色区分方向（减是绿、增是红），但<b>只在绝对值 ≥1 时才写数字</b>，1cm 以内多是量法误差，标出来反而误导。底部"编辑这次记录"允许回填漏项，比让人重记一条更符合直觉。</p>
+  </figure>
+
+</div>
+</body>
+</html>

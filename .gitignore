@@ -1,0 +1,10 @@
+# 原型渲染临时目录（无头 Chrome 的 user-data-dir 与裁剪图）
+_shot/
+
+# 系统与编辑器
+.DS_Store
+Thumbs.db
+desktop.ini
+.idea/
+.vscode/
+*.swp
