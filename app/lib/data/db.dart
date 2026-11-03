@@ -5,7 +5,7 @@ import 'package:path/path.dart' as p;
 const kSchemaVersion = 1;
 
 /// 写进备份包 manifest 的版本号，只用于排障，不参与任何判断。
-const kAppVersion = '0.1.0';
+const kAppVersion = '0.2.0';
 
 /// 建表语句与 `设计文档.md` §4.1 的 DDL 逐字对应。
 ///
@@ -122,8 +122,8 @@ Future<Database> openClosetDb(String path) async {
       await db.execute(_createCategory);
       await db.execute(_createMeta);
 
-      await db.execute(
-          'CREATE INDEX idx_item_person ON item(person_id, status)');
+      await db
+          .execute('CREATE INDEX idx_item_person ON item(person_id, status)');
       await db.execute('CREATE INDEX idx_image_item ON image(item_id, kind)');
       await db.execute(
           'CREATE INDEX idx_body_person ON body_record(person_id, record_date DESC)');
@@ -172,6 +172,10 @@ class ClosetDirs {
   String get orig => p.join(root, 'img', 'orig');
   String get proc => p.join(root, 'img', 'proc');
   String get thumb => p.join(root, 'img', 'thumb');
+
+  /// 角色头像单独一个目录：它和衣服图片的生命周期不同
+  /// （删衣服不该碰头像，删角色才一起删），混在 img/orig 里回收时会漏删。
+  String get avatar => p.join(root, 'img', 'avatar');
   String get exportDir => p.join(root, 'export');
 }
 

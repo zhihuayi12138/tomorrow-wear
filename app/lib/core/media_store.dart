@@ -18,7 +18,14 @@ class MediaStore {
   MediaStore(this.dirs);
 
   Future<void> ensureDirs() async {
-    for (final d in [dirs.root, dirs.orig, dirs.proc, dirs.thumb, dirs.exportDir]) {
+    for (final d in [
+      dirs.root,
+      dirs.orig,
+      dirs.proc,
+      dirs.thumb,
+      dirs.avatar,
+      dirs.exportDir,
+    ]) {
       final f = Directory(d);
       if (!await f.exists()) {
         await f.create(recursive: true);
@@ -44,6 +51,16 @@ class MediaStore {
   Future<String> saveThumb(Uint8List bytes) async {
     final name = '${_uuid.v4()}.jpg';
     final rel = p.join('img', 'thumb', name);
+    await File(p.join(dirs.root, rel)).writeAsBytes(bytes, flush: true);
+    return rel;
+  }
+
+  /// 头像：每次换头像都是新文件名，旧文件由调用方回收。
+  /// 不复用原文件名，是因为 Image.memory 走的是 provider 缓存，
+  /// 同路径换内容不会触发重绘，界面会停在旧头像上。
+  Future<String> saveAvatar(Uint8List bytes, {String ext = 'jpg'}) async {
+    final name = '${_uuid.v4()}.$ext';
+    final rel = p.join('img', 'avatar', name);
     await File(p.join(dirs.root, rel)).writeAsBytes(bytes, flush: true);
     return rel;
   }

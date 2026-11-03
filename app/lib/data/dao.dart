@@ -18,18 +18,22 @@ class PersonDao {
   PersonDao(this.db);
 
   Future<List<Person>> all() async {
-    final rows = await db.query('person', orderBy: 'sort_index ASC, created_at ASC');
+    final rows =
+        await db.query('person', orderBy: 'sort_index ASC, created_at ASC');
     return rows.map(Person.fromMap).toList();
   }
 
   Future<Person?> byId(String id) async {
-    final rows = await db.query('person', where: 'id = ?', whereArgs: [id], limit: 1);
+    final rows =
+        await db.query('person', where: 'id = ?', whereArgs: [id], limit: 1);
     if (rows.isEmpty) return null;
     return Person.fromMap(rows.first);
   }
 
-  Future<Person> create({required String name, double? heightCm, String? avatarPath}) async {
-    final maxSort = await db.rawQuery('SELECT COALESCE(MAX(sort_index), -1) AS m FROM person');
+  Future<Person> create(
+      {required String name, double? heightCm, String? avatarPath}) async {
+    final maxSort = await db
+        .rawQuery('SELECT COALESCE(MAX(sort_index), -1) AS m FROM person');
     final m = (maxSort.first['m'] as int?) ?? -1;
     final person = Person(
       id: _uuid.v4(),
@@ -65,13 +69,39 @@ class PersonDao {
     return files;
   }
 
+  /// 角色名下的全部物理文件：衣服三档图 + 头像。
+  /// 头像漏掉过一次（早期只收集 img/*），结果是删了角色、照片还占着磁盘。
   Future<List<String>> collectImageFilesForPerson(String personId) async {
     final rows = await db.rawQuery('''
       SELECT i.orig_path, i.processed_path, i.thumb_path
       FROM image i JOIN item it ON it.id = i.item_id
       WHERE it.person_id = ?
     ''', [personId]);
-    return _pathsOf(rows);
+    final files = _pathsOf(rows);
+    final p = await db.query('person',
+        columns: ['avatar_path'],
+        where: 'id = ?',
+        whereArgs: [personId],
+        limit: 1);
+    if (p.isNotEmpty) {
+      final a = p.first['avatar_path'] as String?;
+      if (a != null && a.isNotEmpty) files.add(a);
+    }
+    return files;
+  }
+
+  /// 换头像。返回旧头像相对路径（调用方负责物理删除），没有旧头像则返回 null。
+  Future<String?> setAvatar(String personId, String? relPath) async {
+    final rows = await db.query('person',
+        columns: ['avatar_path'],
+        where: 'id = ?',
+        whereArgs: [personId],
+        limit: 1);
+    if (rows.isEmpty) return null;
+    final old = rows.first['avatar_path'] as String?;
+    await db.update('person', {'avatar_path': relPath},
+        where: 'id = ?', whereArgs: [personId]);
+    return (old != null && old.isNotEmpty) ? old : null;
   }
 
   Future<void> reorder(List<String> idsInOrder) async {
@@ -108,7 +138,8 @@ class ItemDao {
     }
     // 季节筛选：四季通用的衣服任何季节都能穿到，所以要一起命中。
     if (season != null && season.isNotEmpty && season != kSeasonAll) {
-      where.add("(seasons = ? OR seasons LIKE ? OR seasons LIKE ? OR seasons LIKE ?)");
+      where.add(
+          "(seasons = ? OR seasons LIKE ? OR seasons LIKE ? OR seasons LIKE ?)");
       args.addAll([
         kSeasonAll,
         '$season,%',
@@ -143,7 +174,8 @@ class ItemDao {
   }
 
   Future<Item?> byId(String id) async {
-    final rows = await db.query('item', where: 'id = ?', whereArgs: [id], limit: 1);
+    final rows =
+        await db.query('item', where: 'id = ?', whereArgs: [id], limit: 1);
     if (rows.isEmpty) return null;
     return Item.fromMap(rows.first);
   }
@@ -253,7 +285,8 @@ class ImageDao {
   }
 
   Future<void> update(ItemImage image) async {
-    await db.update('image', image.toMap(), where: 'id = ?', whereArgs: [image.id]);
+    await db
+        .update('image', image.toMap(), where: 'id = ?', whereArgs: [image.id]);
   }
 
   Future<List<String>> deleteWithFiles(String imageId) async {
@@ -281,7 +314,10 @@ class BodyDao {
 
   Future<BodyRecord?> latest(String personId) async {
     final rows = await db.query('body_record',
-        where: 'person_id = ?', whereArgs: [personId], orderBy: 'record_date DESC', limit: 1);
+        where: 'person_id = ?',
+        whereArgs: [personId],
+        orderBy: 'record_date DESC',
+        limit: 1);
     if (rows.isEmpty) return null;
     return BodyRecord.fromMap(rows.first);
   }
@@ -369,9 +405,11 @@ class CategoryDao {
     return rows.map(Category.fromMap).toList();
   }
 
-  Future<Category> createCustom({required String l1, required String name}) async {
+  Future<Category> createCustom(
+      {required String l1, required String name}) async {
     final maxSort = await db.rawQuery(
-        'SELECT COALESCE(MAX(sort_index), -1) AS m FROM category WHERE l1 = ?', [l1]);
+        'SELECT COALESCE(MAX(sort_index), -1) AS m FROM category WHERE l1 = ?',
+        [l1]);
     final m = (maxSort.first['m'] as int?) ?? -1;
     final c = Category(
       id: _uuid.v4(),
@@ -386,13 +424,15 @@ class CategoryDao {
   }
 
   Future<void> rename(String id, String name) async {
-    await db.update('category', {'name': name}, where: 'id = ?', whereArgs: [id]);
+    await db.update('category', {'name': name},
+        where: 'id = ?', whereArgs: [id]);
   }
 
   /// 删自建类别：**不删衣服**，关联衣服的 category_l2 置空退回一级。
   /// 内置类别只能改名不能删，这里做一次兜底断言。
   Future<int> deleteCustom(String id) async {
-    final rows = await db.query('category', where: 'id = ?', whereArgs: [id], limit: 1);
+    final rows =
+        await db.query('category', where: 'id = ?', whereArgs: [id], limit: 1);
     if (rows.isEmpty) return 0;
     final cat = Category.fromMap(rows.first);
     if (cat.isBuiltin) {
@@ -420,7 +460,8 @@ class MetaDao {
   MetaDao(this.db);
 
   Future<String?> get(String key) async {
-    final rows = await db.query('meta', where: 'key = ?', whereArgs: [key], limit: 1);
+    final rows =
+        await db.query('meta', where: 'key = ?', whereArgs: [key], limit: 1);
     if (rows.isEmpty) return null;
     return rows.first['value'] as String?;
   }

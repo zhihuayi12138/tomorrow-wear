@@ -60,6 +60,36 @@ class FakeRepository implements ClosetRepository {
     bodyRecords.removeWhere((e) => e.personId == personId);
   }
 
+  @override
+  Future<Person> saveAvatar(String personId, Uint8List bytes) async {
+    final i = persons.indexWhere((e) => e.id == personId);
+    if (i < 0) throw StateError('角色不存在：$personId');
+    final rel = 'img/avatar/${_id('av')}.png';
+    files[rel] = bytes;
+    final old = persons[i].avatarPath;
+    if (old != null) files.remove(old);
+    persons[i] = persons[i].copyWith(avatarPath: rel);
+    return persons[i];
+  }
+
+  @override
+  Future<Person> removeAvatar(String personId) async {
+    final i = persons.indexWhere((e) => e.id == personId);
+    if (i < 0) throw StateError('角色不存在：$personId');
+    final old = persons[i].avatarPath;
+    if (old != null) files.remove(old);
+    persons[i] = persons[i].copyWith(clearAvatar: true);
+    return persons[i];
+  }
+
+  @override
+  Future<void> reorderPersons(List<String> idsInOrder) async {
+    for (var i = 0; i < idsInOrder.length; i++) {
+      final k = persons.indexWhere((e) => e.id == idsInOrder[i]);
+      if (k >= 0) persons[k] = persons[k].copyWith(sortIndex: i);
+    }
+  }
+
   // ---- 类别 ----
 
   @override

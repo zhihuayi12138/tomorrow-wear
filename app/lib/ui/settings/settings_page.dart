@@ -6,6 +6,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:share_plus/share_plus.dart';
 
 import '../../core/backup.dart';
+import '../../data/db.dart';
 import '../../state/providers.dart';
 import '../../theme.dart';
 import '../person/person_page.dart';
@@ -82,7 +83,7 @@ class SettingsPage extends ConsumerWidget {
           const Padding(
             padding: EdgeInsets.fromLTRB(20, 4, 20, 0),
             child: Text(
-              '明天穿什么 0.1.0\n'
+              '明天穿什么 $kAppVersion\n'
               '这是一个服装相册：把衣服收进来、拍整齐、随时翻。\n'
               '不做推荐、不做虚拟试衣。',
               style: AppTheme.hint,
@@ -135,7 +136,8 @@ class SettingsPage extends ConsumerWidget {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(title,
-                      style: const TextStyle(fontSize: 14, color: AppColors.ink)),
+                      style:
+                          const TextStyle(fontSize: 14, color: AppColors.ink)),
                   const SizedBox(height: 2),
                   Text(subtitle, style: AppTheme.label),
                 ],
@@ -186,7 +188,8 @@ class SettingsPage extends ConsumerWidget {
     if (mode == null) return;
 
     try {
-      final result = await ref.read(repositoryProvider).importBackup(file, mode);
+      final result =
+          await ref.read(repositoryProvider).importBackup(file, mode);
       ref.invalidate(personsProvider);
       refreshLists(ref);
       if (!context.mounted) return;
@@ -200,7 +203,8 @@ class SettingsPage extends ConsumerWidget {
     }
   }
 
-  Future<ImportMode?> _askMode(BuildContext context, BackupPreview preview) async {
+  Future<ImportMode?> _askMode(
+      BuildContext context, BackupPreview preview) async {
     return showDialog<ImportMode>(
       context: context,
       builder: (context) => AlertDialog(
@@ -221,7 +225,8 @@ class SettingsPage extends ConsumerWidget {
           ],
         ),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(context), child: const Text('算了')),
+          TextButton(
+              onPressed: () => Navigator.pop(context), child: const Text('算了')),
           TextButton(
             onPressed: () => Navigator.pop(context, ImportMode.merge),
             child: const Text('合并'),

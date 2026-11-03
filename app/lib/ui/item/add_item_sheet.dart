@@ -7,6 +7,7 @@ import 'package:image_picker/image_picker.dart';
 import '../../state/providers.dart';
 import '../../theme.dart';
 import '../widgets/common.dart';
+import 'capture_page.dart';
 
 /// P4 拍照 / 选图 —— 新增一件衣服的入口。
 ///
@@ -43,11 +44,13 @@ class _AddItemSheetState extends ConsumerState<AddItemSheet> {
                 children: [
                   const Expanded(
                     child: Text('添加衣服',
-                        style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600)),
+                        style: TextStyle(
+                            fontSize: 16, fontWeight: FontWeight.w600)),
                   ),
                   IconButton(
                     onPressed: () => Navigator.of(context).pop(),
-                    icon: const Icon(Icons.close, size: 20, color: AppColors.ink3),
+                    icon: const Icon(Icons.close,
+                        size: 20, color: AppColors.ink3),
                   ),
                 ],
               ),
@@ -65,15 +68,15 @@ class _AddItemSheetState extends ConsumerState<AddItemSheet> {
                 children: [
                   Expanded(
                     child: OutlinedButton.icon(
-                      onPressed: () => _pick(ImageSource.camera),
+                      onPressed: _capture,
                       icon: const Icon(Icons.photo_camera_outlined, size: 18),
-                      label: const Text('拍一张'),
+                      label: const Text('连着拍'),
                     ),
                   ),
                   const SizedBox(width: 10),
                   Expanded(
                     child: OutlinedButton.icon(
-                      onPressed: () => _pick(ImageSource.gallery),
+                      onPressed: _pickFromGallery,
                       icon: const Icon(Icons.photo_library_outlined, size: 18),
                       label: const Text('从相册选'),
                     ),
@@ -185,26 +188,32 @@ class _AddItemSheetState extends ConsumerState<AddItemSheet> {
     );
   }
 
-  Future<void> _pick(ImageSource source) async {
-    List<XFile> picked;
-    if (source == ImageSource.camera) {
-      final one = await _picker.pickImage(source: source, imageQuality: 92);
-      picked = one == null ? const [] : [one];
-    } else {
-      picked = await _picker.pickMultiImage(imageQuality: 92);
-    }
-    if (picked.isEmpty) return;
+  /// 连拍：一次拍完整批，回来一次性摊进「待添加」。
+  Future<void> _capture() async {
+    final shots = await Navigator.of(context).push<List<Uint8List>>(
+      MaterialPageRoute(builder: (_) => const CapturePage()),
+    );
+    if (!mounted || shots == null || shots.isEmpty) return;
+    _addBytes(shots);
+  }
 
+  Future<void> _pickFromGallery() async {
+    final picked = await _picker.pickMultiImage(imageQuality: 92);
+    if (picked.isEmpty) return;
+    final bytes = <Uint8List>[];
     for (final f in picked) {
-      final bytes = await f.readAsBytes();
-      if (!mounted) return;
-      setState(() {
-        _drafts.add(_Draft(
-          bytes: bytes,
-          name: '新衣服 ${_drafts.length + 1}',
-        ));
-      });
+      bytes.add(await f.readAsBytes());
     }
+    if (!mounted) return;
+    _addBytes(bytes);
+  }
+
+  void _addBytes(List<Uint8List> bytes) {
+    setState(() {
+      for (final b in bytes) {
+        _drafts.add(_Draft(bytes: b, name: '新衣服 ${_drafts.length + 1}'));
+      }
+    });
   }
 
   Future<void> _submit() async {

@@ -1,4 +1,7 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
+    <!-- 连拍用 camera 包，需要显式声明；required=false 让没摄像头的设备也能装 -->
+    <uses-permission android:name="android.permission.CAMERA"/>
+    <uses-feature android:name="android.hardware.camera" android:required="false"/>
     <application
         android:label="明天穿什么"
         android:name="${applicationName}"

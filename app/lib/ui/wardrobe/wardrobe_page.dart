@@ -18,7 +18,8 @@ class WardrobePage extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final person = ref.watch(activePersonProvider);
     final persons = ref.watch(personsProvider);
-    final pending = ref.watch(pendingItemsProvider).valueOrNull ?? const <Item>[];
+    final pending =
+        ref.watch(pendingItemsProvider).valueOrNull ?? const <Item>[];
 
     return Scaffold(
       appBar: AppBar(
@@ -46,7 +47,8 @@ class WardrobePage extends ConsumerWidget {
         ],
       ),
       body: persons.when(
-        loading: () => const Center(child: CircularProgressIndicator(strokeWidth: 2)),
+        loading: () =>
+            const Center(child: CircularProgressIndicator(strokeWidth: 2)),
         error: (e, _) => Center(child: Text('读取失败：$e')),
         data: (list) {
           if (list.isEmpty) {
@@ -60,13 +62,15 @@ class WardrobePage extends ConsumerWidget {
               ),
             );
           }
-          return _WardrobeBody(personId: person!.id, pendingCount: pending.length);
+          return _WardrobeBody(
+              personId: person!.id, pendingCount: pending.length);
         },
       ),
     );
   }
 
-  Future<void> _openAdd(BuildContext context, WidgetRef ref, String personId) async {
+  Future<void> _openAdd(
+      BuildContext context, WidgetRef ref, String personId) async {
     await showModalBottomSheet<void>(
       context: context,
       isScrollControlled: true,
@@ -140,9 +144,9 @@ class _WardrobeBody extends ConsumerWidget {
                         title: '这个条件下没有衣服',
                         hint: '试试清掉筛选，或者换个类别看看。',
                         actionLabel: '清掉筛选',
-                        onAction: () =>
-                            ref.read(wardrobeFilterProvider.notifier).state =
-                                const WardrobeFilter(),
+                        onAction: () => ref
+                            .read(wardrobeFilterProvider.notifier)
+                            .state = const WardrobeFilter(),
                       ),
               );
             }
@@ -194,7 +198,8 @@ class _PendingBanner extends StatelessWidget {
           ),
           child: Row(
             children: [
-              const Icon(Icons.inbox_outlined, size: 17, color: AppColors.accent),
+              const Icon(Icons.inbox_outlined,
+                  size: 17, color: AppColors.accent),
               const SizedBox(width: 9),
               Text(
                 '$count 件待确认',
@@ -205,8 +210,10 @@ class _PendingBanner extends StatelessWidget {
                 ),
               ),
               const Spacer(),
-              const Text('去确认', style: TextStyle(fontSize: 12.5, color: AppColors.accent)),
-              const Icon(Icons.chevron_right, size: 16, color: AppColors.accent),
+              const Text('去确认',
+                  style: TextStyle(fontSize: 12.5, color: AppColors.accent)),
+              const Icon(Icons.chevron_right,
+                  size: 16, color: AppColors.accent),
             ],
           ),
         ),
@@ -243,7 +250,8 @@ class _RoleTabs extends ConsumerWidget {
                   borderRadius: BorderRadius.circular(20),
                   border: Border.all(color: AppColors.line),
                 ),
-                child: const Icon(Icons.more_horiz, size: 17, color: AppColors.ink2),
+                child: const Icon(Icons.more_horiz,
+                    size: 17, color: AppColors.ink2),
               ),
             );
           }
@@ -451,7 +459,8 @@ class _ItemTile extends StatelessWidget {
                     right: 6,
                     top: 6,
                     child: Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 2),
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 5, vertical: 2),
                       decoration: BoxDecoration(
                         color: Colors.white.withValues(alpha: 0.9),
                         borderRadius: BorderRadius.circular(4),

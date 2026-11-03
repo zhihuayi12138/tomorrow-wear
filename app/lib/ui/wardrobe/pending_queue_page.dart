@@ -29,7 +29,8 @@ class PendingQueuePage extends ConsumerWidget {
         ),
       ),
       body: items.when(
-        loading: () => const Center(child: CircularProgressIndicator(strokeWidth: 2)),
+        loading: () =>
+            const Center(child: CircularProgressIndicator(strokeWidth: 2)),
         error: (e, _) => Center(child: Text('读取失败：$e')),
         data: (list) {
           if (list.isEmpty) {
@@ -170,7 +171,8 @@ class _PendingCard extends ConsumerWidget {
                       onTap: () => _rename(context, ref),
                       child: const Padding(
                         padding: EdgeInsets.only(left: 6),
-                        child: Icon(Icons.edit_outlined, size: 15, color: AppColors.ink3),
+                        child: Icon(Icons.edit_outlined,
+                            size: 15, color: AppColors.ink3),
                       ),
                     ),
                   ],
@@ -203,11 +205,13 @@ class _PendingCard extends ConsumerWidget {
                   const SizedBox(height: 6),
                   Row(
                     children: [
-                      const Icon(Icons.error_outline, size: 13, color: AppColors.accent),
+                      const Icon(Icons.error_outline,
+                          size: 13, color: AppColors.accent),
                       const SizedBox(width: 4),
                       Text(
                         '类别拿不准，点一下改',
-                        style: TextStyle(fontSize: 11.5, color: AppColors.accent),
+                        style:
+                            TextStyle(fontSize: 11.5, color: AppColors.accent),
                       ),
                     ],
                   ),
@@ -256,7 +260,8 @@ class _PendingCard extends ConsumerWidget {
   }
 
   String _l2Name(WidgetRef ref, String id) {
-    final cats = ref.watch(categoriesProvider).valueOrNull ?? const <Category>[];
+    final cats =
+        ref.watch(categoriesProvider).valueOrNull ?? const <Category>[];
     for (final c in cats) {
       if (c.id == id) return c.name;
     }
@@ -281,7 +286,8 @@ class _PendingCard extends ConsumerWidget {
           decoration: const InputDecoration(hintText: '比如「灰色卫衣」'),
         ),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(context), child: const Text('取消')),
+          TextButton(
+              onPressed: () => Navigator.pop(context), child: const Text('取消')),
           TextButton(
             onPressed: () => Navigator.pop(context, controller.text.trim()),
             child: const Text('好'),
@@ -302,7 +308,8 @@ class _MiniButton extends StatelessWidget {
   final bool filled;
   final VoidCallback onTap;
 
-  const _MiniButton({required this.label, required this.onTap, this.filled = false});
+  const _MiniButton(
+      {required this.label, required this.onTap, this.filled = false});
 
   @override
   Widget build(BuildContext context) {

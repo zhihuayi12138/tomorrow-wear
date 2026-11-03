@@ -50,15 +50,17 @@ class _BodyRecordPageState extends ConsumerState<BodyRecordPage> {
   @override
   Widget build(BuildContext context) {
     final person = ref.watch(activePersonProvider);
-    final records = ref.watch(bodyRecordsProvider(widget.personId)).valueOrNull ??
-        const <BodyRecord>[];
+    final records =
+        ref.watch(bodyRecordsProvider(widget.personId)).valueOrNull ??
+            const <BodyRecord>[];
     final last = records.isEmpty ? null : records.first;
 
     return Scaffold(
       appBar: AppBar(
         title: const Text('记录一次身材'),
         leading: IconButton(
-          icon: const Text('取消', style: TextStyle(fontSize: 15, color: AppColors.ink2)),
+          icon: const Text('取消',
+              style: TextStyle(fontSize: 15, color: AppColors.ink2)),
           onPressed: () => Navigator.of(context).pop(),
         ),
       ),
@@ -78,7 +80,8 @@ class _BodyRecordPageState extends ConsumerState<BodyRecordPage> {
                     ),
                     child: Text(
                       '${_date.year}年${_date.month}月${_date.day}日',
-                      style: const TextStyle(fontSize: 14, color: AppColors.ink),
+                      style:
+                          const TextStyle(fontSize: 14, color: AppColors.ink),
                     ),
                   ),
                 ),
@@ -87,8 +90,11 @@ class _BodyRecordPageState extends ConsumerState<BodyRecordPage> {
               Expanded(
                 child: TextField(
                   controller: _weight,
-                  keyboardType: const TextInputType.numberWithOptions(decimal: true),
-                  inputFormatters: [FilteringTextInputFormatter.allow(RegExp(r'[0-9.]'))],
+                  keyboardType:
+                      const TextInputType.numberWithOptions(decimal: true),
+                  inputFormatters: [
+                    FilteringTextInputFormatter.allow(RegExp(r'[0-9.]'))
+                  ],
                   onChanged: (_) => setState(() {}),
                   decoration: InputDecoration(
                     labelText: '体重',
@@ -153,7 +159,9 @@ class _BodyRecordPageState extends ConsumerState<BodyRecordPage> {
                   Expanded(child: _cell(fields[i])),
                   const SizedBox(width: 10),
                   Expanded(
-                    child: i + 1 < fields.length ? _cell(fields[i + 1]) : const SizedBox(),
+                    child: i + 1 < fields.length
+                        ? _cell(fields[i + 1])
+                        : const SizedBox(),
                   ),
                 ],
               ),
@@ -167,7 +175,8 @@ class _BodyRecordPageState extends ConsumerState<BodyRecordPage> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(f.label, style: const TextStyle(fontSize: 10.5, color: AppColors.ink3)),
+        Text(f.label,
+            style: const TextStyle(fontSize: 10.5, color: AppColors.ink3)),
         const SizedBox(height: 4),
         SizedBox(
           height: 34,
@@ -175,14 +184,17 @@ class _BodyRecordPageState extends ConsumerState<BodyRecordPage> {
             controller: _fields[f.key],
             textAlignVertical: TextAlignVertical.center,
             keyboardType: const TextInputType.numberWithOptions(decimal: true),
-            inputFormatters: [FilteringTextInputFormatter.allow(RegExp(r'[0-9.]'))],
+            inputFormatters: [
+              FilteringTextInputFormatter.allow(RegExp(r'[0-9.]'))
+            ],
             onChanged: (_) => setState(() {}),
             style: const TextStyle(fontSize: 13.5, color: AppColors.ink),
             decoration: InputDecoration(
               hintText: '未填',
               suffixText: f.unit,
               suffixStyle: const TextStyle(fontSize: 11, color: AppColors.ink3),
-              contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 0),
+              contentPadding:
+                  const EdgeInsets.symmetric(horizontal: 12, vertical: 0),
               isDense: true,
             ),
           ),
@@ -255,7 +267,8 @@ class _GroupHeader extends StatelessWidget {
             ),
           ),
           const Spacer(),
-          Text(_purpose, style: const TextStyle(fontSize: 10.5, color: AppColors.ink3)),
+          Text(_purpose,
+              style: const TextStyle(fontSize: 10.5, color: AppColors.ink3)),
         ],
       ),
     );
@@ -307,6 +320,20 @@ class BodyRecordDetailPage extends ConsumerWidget {
           icon: const Icon(Icons.arrow_back_ios_new, size: 18),
           onPressed: () => Navigator.of(context).pop(),
         ),
+        actions: [
+          PopupMenuButton<String>(
+            icon: const Icon(Icons.more_horiz, size: 20),
+            onSelected: (v) {
+              if (v == 'delete') _confirmDelete(context, ref);
+            },
+            itemBuilder: (_) => const [
+              PopupMenuItem<String>(
+                value: 'delete',
+                child: Text('删掉这次记录', style: TextStyle(color: AppColors.up)),
+              ),
+            ],
+          ),
+        ],
       ),
       body: ListView(
         padding: const EdgeInsets.fromLTRB(16, 4, 16, 28),
@@ -316,7 +343,8 @@ class BodyRecordDetailPage extends ConsumerWidget {
             child: Row(
               children: [
                 Text(formatDate(record.recordDate),
-                    style: const TextStyle(fontSize: 13, color: AppColors.ink2)),
+                    style:
+                        const TextStyle(fontSize: 13, color: AppColors.ink2)),
                 const Spacer(),
                 Text('${record.filledCount} 项有值', style: AppTheme.label),
               ],
@@ -333,19 +361,24 @@ class BodyRecordDetailPage extends ConsumerWidget {
               children: [
                 Container(
                   color: AppColors.soft,
-                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
                   child: const Row(
                     children: [
-                      SizedBox(width: 72, child: Text('项目', style: AppTheme.label)),
+                      SizedBox(
+                          width: 72, child: Text('项目', style: AppTheme.label)),
                       Expanded(
-                        child: Text('当次', textAlign: TextAlign.right, style: AppTheme.label),
+                        child: Text('当次',
+                            textAlign: TextAlign.right, style: AppTheme.label),
                       ),
                       Expanded(
-                        child: Text('上次', textAlign: TextAlign.right, style: AppTheme.label),
+                        child: Text('上次',
+                            textAlign: TextAlign.right, style: AppTheme.label),
                       ),
                       SizedBox(
                         width: 62,
-                        child: Text('变化', textAlign: TextAlign.right, style: AppTheme.label),
+                        child: Text('变化',
+                            textAlign: TextAlign.right, style: AppTheme.label),
                       ),
                     ],
                   ),
@@ -360,9 +393,48 @@ class BodyRecordDetailPage extends ConsumerWidget {
             style: AppTheme.hint,
             textAlign: TextAlign.center,
           ),
+          const SizedBox(height: 22),
+          OutlinedButton(
+            onPressed: () => _confirmDelete(context, ref),
+            style: OutlinedButton.styleFrom(foregroundColor: AppColors.up),
+            child: const Text('删掉这次记录'),
+          ),
+          const SizedBox(height: 8),
+          // 不承诺「能撤销」：真的没有回收站，说明白了反而不会误删。
+          Text(
+            '删了找不回来。如果只是记错了数字，重新记一次同一天的会覆盖它。',
+            style: AppTheme.hint,
+            textAlign: TextAlign.center,
+          ),
         ],
       ),
     );
+  }
+
+  Future<void> _confirmDelete(BuildContext context, WidgetRef ref) async {
+    final ok = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Text('删掉 ${formatDate(record.recordDate)} 这次记录？'),
+        content: const Text('这次记下的体重和各项尺寸会一起消失，删了找不回来。'),
+        actions: [
+          TextButton(
+              onPressed: () => Navigator.pop(context, false),
+              child: const Text('算了')),
+          TextButton(
+            onPressed: () => Navigator.pop(context, true),
+            child: const Text('删掉', style: TextStyle(color: AppColors.up)),
+          ),
+        ],
+      ),
+    );
+    if (ok != true) return;
+
+    await ref.read(repositoryProvider).deleteBodyRecord(record.id);
+    ref.invalidate(bodyRecordsProvider(personId));
+    if (!context.mounted) return;
+    Navigator.of(context).pop();
+    showToast(context, '删掉了');
   }
 }
 
@@ -385,7 +457,8 @@ class _DetailRow extends StatelessWidget {
         children: [
           SizedBox(
             width: 72,
-            child: Text(label, style: const TextStyle(fontSize: 12, color: AppColors.ink2)),
+            child: Text(label,
+                style: const TextStyle(fontSize: 12, color: AppColors.ink2)),
           ),
           Expanded(
             child: Text(

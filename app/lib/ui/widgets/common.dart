@@ -146,7 +146,10 @@ class EmptyState extends StatelessWidget {
 }
 
 /// 角色头像：有图用图，没图用名字首字 + 按 id 稳定的底色。
-class PersonAvatar extends StatelessWidget {
+///
+/// 用图片时**不裁成圆形**，而是圆角方 —— 和没图时的首字块保持同一个形状，
+/// 换头像前后布局不跳动。
+class PersonAvatar extends ConsumerWidget {
   final Person person;
   final double size;
 
@@ -170,15 +173,39 @@ class PersonAvatar extends StatelessWidget {
   }
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
+    final radius = BorderRadius.circular(size * 0.34);
+    final avatar = person.avatarPath;
+
+    if (avatar != null && avatar.isNotEmpty) {
+      final bytes = ref.watch(imageBytesProvider(avatar));
+      final data = bytes.valueOrNull;
+      if (data != null) {
+        return ClipRRect(
+          borderRadius: radius,
+          child: Image.memory(
+            data,
+            width: size,
+            height: size,
+            fit: BoxFit.cover,
+            gaplessPlayback: true,
+            filterQuality: FilterQuality.medium,
+          ),
+        );
+      }
+      // 图还没解码完：先占住位置和底色，避免列表跳动。
+      return Container(
+        width: size,
+        height: size,
+        decoration: BoxDecoration(color: _bg, borderRadius: radius),
+      );
+    }
+
     final initial = person.name.isEmpty ? '?' : person.name.substring(0, 1);
     return Container(
       width: size,
       height: size,
-      decoration: BoxDecoration(
-        color: _bg,
-        borderRadius: BorderRadius.circular(size * 0.34),
-      ),
+      decoration: BoxDecoration(color: _bg, borderRadius: radius),
       clipBehavior: Clip.antiAlias,
       alignment: Alignment.center,
       child: Text(

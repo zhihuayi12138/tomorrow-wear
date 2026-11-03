@@ -1,7 +1,7 @@
 name: mingtian_chuanshenme
-description: 明天穿什么 —— 私人的、多角色的服装相册
+description: 明天穿什么 —— 私人、多角色的服装相册
 publish_to: 'none'
-version: 0.1.0+1
+version: 0.2.0+2
 
 environment:
   sdk: '>=3.4.0 <4.0.0'
@@ -19,6 +19,7 @@ dependencies:
   image: ^4.2.0
   file_picker: ^8.1.2
   share_plus: ^10.0.2
+  camera: ^0.12.2
 
 dev_dependencies:
   flutter_test:

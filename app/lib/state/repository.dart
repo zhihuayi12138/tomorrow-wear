@@ -18,6 +18,15 @@ abstract class ClosetRepository {
   Future<void> updatePerson(Person person);
   Future<void> deletePerson(String personId);
 
+  /// 按给定顺序重排角色，下标即新的 sortIndex。
+  Future<void> reorderPersons(List<String> idsInOrder);
+
+  /// 存一张头像，返回更新后的角色。
+  Future<Person> saveAvatar(String personId, Uint8List bytes);
+
+  /// 清掉头像，回到名字首字。
+  Future<Person> removeAvatar(String personId);
+
   // ---- 二级类别 ----
   Future<List<Category>> loadCategories();
   Future<Category> createCategory({required String l1, required String name});

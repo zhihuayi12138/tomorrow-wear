@@ -69,7 +69,8 @@ class ItemDetailPage extends ConsumerWidget {
                 padding: const EdgeInsets.fromLTRB(16, 8, 16, 0),
                 child: OutlinedButton.icon(
                   onPressed: () => _pickWorn(context, ref, item.id),
-                  icon: const Icon(Icons.add_photo_alternate_outlined, size: 18),
+                  icon:
+                      const Icon(Icons.add_photo_alternate_outlined, size: 18),
                   label: const Text('上传一张上身效果图'),
                 ),
               ),
@@ -80,24 +81,31 @@ class ItemDetailPage extends ConsumerWidget {
     );
   }
 
-  Future<void> _pickWorn(BuildContext context, WidgetRef ref, String itemId) async {
+  Future<void> _pickWorn(
+      BuildContext context, WidgetRef ref, String itemId) async {
     final picker = ImagePicker();
-    final file = await picker.pickImage(source: ImageSource.gallery, imageQuality: 92);
+    final file =
+        await picker.pickImage(source: ImageSource.gallery, imageQuality: 92);
     if (file == null) return;
     final bytes = await file.readAsBytes();
-    await ref.read(repositoryProvider).addWornPhoto(itemId: itemId, bytes: bytes);
+    await ref
+        .read(repositoryProvider)
+        .addWornPhoto(itemId: itemId, bytes: bytes);
     ref.invalidate(itemImagesProvider(itemId));
     if (context.mounted) showToast(context, '上身图加好了');
   }
 
-  Future<void> _confirmDelete(BuildContext context, WidgetRef ref, Item item) async {
+  Future<void> _confirmDelete(
+      BuildContext context, WidgetRef ref, Item item) async {
     final ok = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
         title: const Text('删掉这件衣服？'),
         content: const Text('平铺图和上身图会一起删掉，删了找不回来。'),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('算了')),
+          TextButton(
+              onPressed: () => Navigator.pop(context, false),
+              child: const Text('算了')),
           TextButton(
             onPressed: () => Navigator.pop(context, true),
             child: const Text('删掉', style: TextStyle(color: AppColors.up)),
@@ -171,7 +179,8 @@ class _FlatGalleryState extends ConsumerState<_FlatGallery> {
                       ref.invalidate(itemImagesProvider(img.itemId));
                     },
                     child: Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 10, vertical: 6),
                       decoration: BoxDecoration(
                         color: Colors.white.withValues(alpha: 0.94),
                         borderRadius: BorderRadius.circular(14),
@@ -189,7 +198,8 @@ class _FlatGalleryState extends ConsumerState<_FlatGallery> {
                           const SizedBox(width: 4),
                           Text(
                             showOriginal ? '看处理图' : '看原图',
-                            style: const TextStyle(fontSize: 11.5, color: AppColors.ink2),
+                            style: const TextStyle(
+                                fontSize: 11.5, color: AppColors.ink2),
                           ),
                         ],
                       ),
@@ -232,7 +242,8 @@ class _AttributeCard extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final cats = ref.watch(categoriesProvider).valueOrNull ?? const <Category>[];
+    final cats =
+        ref.watch(categoriesProvider).valueOrNull ?? const <Category>[];
     String? l2;
     for (final c in cats) {
       if (c.id == item.categoryL2) l2 = c.name;
@@ -247,7 +258,8 @@ class _AttributeCard extends ConsumerWidget {
           _Row(label: '名称', value: item.name),
           _Row(
             label: '类别',
-            value: '${L1Category.labelOf(item.categoryL1)}${l2 == null ? '' : ' · $l2'}',
+            value:
+                '${L1Category.labelOf(item.categoryL1)}${l2 == null ? '' : ' · $l2'}',
           ),
           _Row(
             label: '主色',
@@ -330,7 +342,8 @@ class _WornSection extends ConsumerWidget {
           padding: const EdgeInsets.symmetric(horizontal: 16),
           child: worn.isEmpty
               ? Container(
-                  padding: const EdgeInsets.symmetric(vertical: 22, horizontal: 16),
+                  padding:
+                      const EdgeInsets.symmetric(vertical: 22, horizontal: 16),
                   decoration: BoxDecoration(
                     color: AppColors.soft,
                     borderRadius: BorderRadius.circular(14),
@@ -371,11 +384,14 @@ class _WornSection extends ConsumerWidget {
                               ),
                               clipBehavior: Clip.antiAlias,
                               // 上身图不生成处理版，只显示原图。
-                              child: ClosetImage(im.origPath, fit: BoxFit.cover),
+                              child:
+                                  ClosetImage(im.origPath, fit: BoxFit.cover),
                             ),
                             const SizedBox(height: 5),
                             Text(
-                              im.wornDate == null ? '未标日期' : formatShortDate(im.wornDate!),
+                              im.wornDate == null
+                                  ? '未标日期'
+                                  : formatShortDate(im.wornDate!),
                               style: AppTheme.label,
                             ),
                           ],
@@ -389,13 +405,16 @@ class _WornSection extends ConsumerWidget {
     );
   }
 
-  Future<void> _confirmDelete(BuildContext context, WidgetRef ref, ItemImage im) async {
+  Future<void> _confirmDelete(
+      BuildContext context, WidgetRef ref, ItemImage im) async {
     final ok = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
         title: const Text('删掉这张上身图？'),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('算了')),
+          TextButton(
+              onPressed: () => Navigator.pop(context, false),
+              child: const Text('算了')),
           TextButton(
             onPressed: () => Navigator.pop(context, true),
             child: const Text('删掉', style: TextStyle(color: AppColors.up)),
@@ -452,7 +471,9 @@ class _EditItemSheetState extends ConsumerState<EditItemSheet> {
               const Text('改属性',
                   style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600)),
               const SizedBox(height: 18),
-              TextField(controller: _name, decoration: const InputDecoration(hintText: '名称')),
+              TextField(
+                  controller: _name,
+                  decoration: const InputDecoration(hintText: '名称')),
               const SizedBox(height: 18),
               const Text('一级类别', style: AppTheme.label),
               const SizedBox(height: 8),
@@ -483,7 +504,8 @@ class _EditItemSheetState extends ConsumerState<EditItemSheet> {
                       SoftChip(
                         c.name,
                         selected: _l2 == c.id,
-                        onTap: () => setState(() => _l2 = _l2 == c.id ? null : c.id),
+                        onTap: () =>
+                            setState(() => _l2 = _l2 == c.id ? null : c.id),
                       ),
                   ],
                 ),

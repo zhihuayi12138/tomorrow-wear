@@ -237,8 +237,10 @@ img.Image _composeSquare(
 img.Image _resizeMax(img.Image im, int maxEdge) {
   if (im.width <= maxEdge && im.height <= maxEdge) return im;
   return im.width >= im.height
-      ? img.copyResize(im, width: maxEdge, interpolation: img.Interpolation.average)
-      : img.copyResize(im, height: maxEdge, interpolation: img.Interpolation.average);
+      ? img.copyResize(im,
+          width: maxEdge, interpolation: img.Interpolation.average)
+      : img.copyResize(im,
+          height: maxEdge, interpolation: img.Interpolation.average);
 }
 
 class ColorSample {
@@ -275,7 +277,8 @@ ColorSample? _sampleToResult(int r, int g, int b) {
   var bestName = _colorTable.first.$1;
   var bestDist = double.infinity;
   for (final c in _colorTable) {
-    final d = math.pow(c.$2 - r, 2) + math.pow(c.$3 - g, 2) + math.pow(c.$4 - b, 2);
+    final d =
+        math.pow(c.$2 - r, 2) + math.pow(c.$3 - g, 2) + math.pow(c.$4 - b, 2);
     if (d < bestDist) {
       bestDist = d.toDouble();
       bestName = c.$1;
@@ -289,7 +292,8 @@ ColorSample? _sampleToResult(int r, int g, int b) {
 }
 
 /// 有 mask：只在前景像素上做 k-means(k=3)，取占比最大且亮度适中的簇。
-ColorSample? _extractColor(img.Image im, _Box box, ByteData mask, int maskSide) {
+ColorSample? _extractColor(
+    img.Image im, _Box box, ByteData mask, int maskSide) {
   final mw = maskSide;
   final mh = maskSide;
 
@@ -333,7 +337,8 @@ ColorSample? _kmeansDominant(List<(int, int, int)> pixels) {
   final k = 3;
   var centers = <List<double>>[
     for (var i = 0; i < k; i++)
-      _toDouble(pixels[((i + 0.5) / k * pixels.length).floor().clamp(0, pixels.length - 1)]),
+      _toDouble(pixels[
+          ((i + 0.5) / k * pixels.length).floor().clamp(0, pixels.length - 1)]),
   ];
 
   var assign = List<int>.filled(pixels.length, 0);
@@ -378,7 +383,10 @@ ColorSample? _kmeansDominant(List<(int, int, int)> pixels) {
   var bestIdx = -1;
   var bestCount = -1;
   for (var c = 0; c < k; c++) {
-    final lum = (0.2126 * centers[c][0] + 0.7152 * centers[c][1] + 0.0722 * centers[c][2]) / 255.0;
+    final lum = (0.2126 * centers[c][0] +
+            0.7152 * centers[c][1] +
+            0.0722 * centers[c][2]) /
+        255.0;
     if (lum < 0.06 || lum > 0.97) continue;
     if (counts[c] > bestCount) {
       bestCount = counts[c];
@@ -399,11 +407,10 @@ ColorSample? _kmeansDominant(List<(int, int, int)> pixels) {
 
 double _lum((int, int, int) p) => 0.2126 * p.$1 + 0.7152 * p.$2 + 0.0722 * p.$3;
 
-double _dist2((int, int, int) p, List<double> c) =>
-    (math.pow(p.$1 - c[0], 2) +
-            math.pow(p.$2 - c[1], 2) +
-            math.pow(p.$3 - c[2], 2))
-        .toDouble();
+double _dist2((int, int, int) p, List<double> c) => (math.pow(p.$1 - c[0], 2) +
+        math.pow(p.$2 - c[1], 2) +
+        math.pow(p.$3 - c[2], 2))
+    .toDouble();
 
 List<double> _toDouble((int, int, int) p) =>
     [p.$1.toDouble(), p.$2.toDouble(), p.$3.toDouble()];

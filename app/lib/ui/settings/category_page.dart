@@ -87,12 +87,12 @@ class _L1Group extends ConsumerWidget {
                 spacing: 8,
                 runSpacing: 8,
                 children: [
-                  for (final c in categories)
-                    _CategoryChip(category: c),
+                  for (final c in categories) _CategoryChip(category: c),
                   GestureDetector(
                     onTap: () => _add(context, ref, l1),
                     child: Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 12, vertical: 6),
                       decoration: BoxDecoration(
                         borderRadius: BorderRadius.circular(20),
                         border: Border.all(color: AppColors.line),
@@ -102,7 +102,9 @@ class _L1Group extends ConsumerWidget {
                         children: [
                           Icon(Icons.add, size: 13, color: AppColors.ink3),
                           SizedBox(width: 3),
-                          Text('加一个', style: TextStyle(fontSize: 12, color: AppColors.ink3)),
+                          Text('加一个',
+                              style: TextStyle(
+                                  fontSize: 12, color: AppColors.ink3)),
                         ],
                       ),
                     ),
@@ -166,7 +168,8 @@ class _CategoryChip extends ConsumerWidget {
               child: Row(
                 children: [
                   Text(category.name,
-                      style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w600)),
+                      style: const TextStyle(
+                          fontSize: 15, fontWeight: FontWeight.w600)),
                   const Spacer(),
                   if (category.isBuiltin)
                     const Text('内置', style: AppTheme.label),
@@ -180,7 +183,8 @@ class _CategoryChip extends ConsumerWidget {
             ),
             if (!category.isBuiltin)
               ListTile(
-                leading: const Icon(Icons.delete_outline, size: 19, color: AppColors.up),
+                leading: const Icon(Icons.delete_outline,
+                    size: 19, color: AppColors.up),
                 title: const Text('删掉', style: TextStyle(color: AppColors.up)),
                 onTap: () => Navigator.pop(context, 'delete'),
               ),
@@ -202,19 +206,20 @@ class _CategoryChip extends ConsumerWidget {
   }
 
   Future<void> _confirmDelete(BuildContext context, WidgetRef ref) async {
-    final count = await ref.read(repositoryProvider).countItemsInCategory(category.id);
+    final count =
+        await ref.read(repositoryProvider).countItemsInCategory(category.id);
     if (!context.mounted) return;
     final ok = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
         title: Text('删掉「${category.name}」？'),
         content: Text(
-          count == 0
-              ? '还没有衣服用它，删了不影响任何东西。'
-              : '$count 件衣服会退回到一级类别，衣服本身不删。',
+          count == 0 ? '还没有衣服用它，删了不影响任何东西。' : '$count 件衣服会退回到一级类别，衣服本身不删。',
         ),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('算了')),
+          TextButton(
+              onPressed: () => Navigator.pop(context, false),
+              child: const Text('算了')),
           TextButton(
             onPressed: () => Navigator.pop(context, true),
             child: const Text('删掉', style: TextStyle(color: AppColors.up)),
@@ -260,15 +265,15 @@ class _CustomSection extends ConsumerWidget {
               const SizedBox(width: 6),
               if (mine.isNotEmpty)
                 Text('${mine.length} 个',
-                    style: const TextStyle(fontSize: 11, color: AppColors.ink3)),
+                    style:
+                        const TextStyle(fontSize: 11, color: AppColors.ink3)),
             ],
           ),
           const SizedBox(height: 10),
           if (mine.isEmpty)
             Padding(
               padding: const EdgeInsets.only(bottom: 8),
-              child: Text('还没有。上面的「加一个」建出来的会集中在这里。',
-                  style: AppTheme.hint),
+              child: Text('还没有。上面的「加一个」建出来的会集中在这里。', style: AppTheme.hint),
             )
           else
             for (final c in mine)
@@ -276,21 +281,27 @@ class _CustomSection extends ConsumerWidget {
                 padding: const EdgeInsets.only(bottom: 8),
                 child: Row(
                   children: [
-                    Text(c.name, style: const TextStyle(fontSize: 12.5, color: AppColors.ink2)),
+                    Text(c.name,
+                        style: const TextStyle(
+                            fontSize: 12.5, color: AppColors.ink2)),
                     const SizedBox(width: 8),
                     Text('· ${L1Category.labelOf(c.l1)}',
-                        style: const TextStyle(fontSize: 11, color: AppColors.ink3)),
+                        style: const TextStyle(
+                            fontSize: 11, color: AppColors.ink3)),
                     const Spacer(),
                     GestureDetector(
                       onTap: () async {
                         final name =
                             await _promptName(context, '改个名字', initial: c.name);
                         if (name == null || name.isEmpty) return;
-                        await ref.read(repositoryProvider).renameCategory(c.id, name);
+                        await ref
+                            .read(repositoryProvider)
+                            .renameCategory(c.id, name);
                         ref.invalidate(categoriesProvider);
                       },
                       child: const Text('改名',
-                          style: TextStyle(fontSize: 11.5, color: AppColors.accent)),
+                          style: TextStyle(
+                              fontSize: 11.5, color: AppColors.accent)),
                     ),
                     const SizedBox(width: 12),
                     GestureDetector(
@@ -308,7 +319,8 @@ class _CustomSection extends ConsumerWidget {
                                 : '$count 件衣服会退回到一级类别，衣服本身不删。'),
                             actions: [
                               TextButton(
-                                  onPressed: () => Navigator.pop(context, false),
+                                  onPressed: () =>
+                                      Navigator.pop(context, false),
                                   child: const Text('算了')),
                               TextButton(
                                   onPressed: () => Navigator.pop(context, true),
@@ -323,7 +335,8 @@ class _CustomSection extends ConsumerWidget {
                         refreshLists(ref);
                       },
                       child: const Text('删除',
-                          style: TextStyle(fontSize: 11.5, color: AppColors.up)),
+                          style:
+                              TextStyle(fontSize: 11.5, color: AppColors.up)),
                     ),
                   ],
                 ),
@@ -335,7 +348,8 @@ class _CustomSection extends ConsumerWidget {
   }
 }
 
-Future<String?> _promptName(BuildContext context, String title, {String? initial}) async {
+Future<String?> _promptName(BuildContext context, String title,
+    {String? initial}) async {
   final controller = TextEditingController(text: initial ?? '');
   final result = await showDialog<String>(
     context: context,
@@ -347,7 +361,8 @@ Future<String?> _promptName(BuildContext context, String title, {String? initial
         decoration: const InputDecoration(hintText: '比如「背心」「吊带」'),
       ),
       actions: [
-        TextButton(onPressed: () => Navigator.pop(context), child: const Text('取消')),
+        TextButton(
+            onPressed: () => Navigator.pop(context), child: const Text('取消')),
         TextButton(
           onPressed: () => Navigator.pop(context, controller.text.trim()),
           child: const Text('好'),

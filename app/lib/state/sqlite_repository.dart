@@ -121,6 +121,29 @@ class SqliteRepository implements ClosetRepository {
     await _m.deleteAll(files);
   }
 
+  @override
+  Future<void> reorderPersons(List<String> idsInOrder) =>
+      persons.reorder(idsInOrder);
+
+  @override
+  Future<Person> saveAvatar(String personId, Uint8List bytes) async {
+    final rel = await _m.saveAvatar(bytes, ext: _extOf(bytes));
+    final old = await persons.setAvatar(personId, rel);
+    if (old != null) await _m.deleteAll([old]);
+    final p = await persons.byId(personId);
+    if (p == null) throw StateError('角色不存在：$personId');
+    return p;
+  }
+
+  @override
+  Future<Person> removeAvatar(String personId) async {
+    final old = await persons.setAvatar(personId, null);
+    if (old != null) await _m.deleteAll([old]);
+    final p = await persons.byId(personId);
+    if (p == null) throw StateError('角色不存在：$personId');
+    return p;
+  }
+
   // ---- 类别 ----
 
   @override
@@ -135,7 +158,8 @@ class SqliteRepository implements ClosetRepository {
       categories.rename(categoryId, name);
 
   @override
-  Future<int> deleteCategory(String categoryId) => categories.deleteCustom(categoryId);
+  Future<int> deleteCategory(String categoryId) =>
+      categories.deleteCustom(categoryId);
 
   @override
   Future<int> countItemsInCategory(String categoryId) =>
@@ -152,10 +176,7 @@ class SqliteRepository implements ClosetRepository {
     String? query,
   }) =>
       items.listForPerson(personId,
-          status: status,
-          categoryL1: categoryL1,
-          season: season,
-          query: query);
+          status: status, categoryL1: categoryL1, season: season, query: query);
 
   @override
   Future<Map<String, ItemImage>> loadCovers(String personId) =>
@@ -200,7 +221,8 @@ class SqliteRepository implements ClosetRepository {
     String? colorHex;
     String? colorName;
     try {
-      final result = await processInIsolate(bytes, mask: segmenter?.call(bytes));
+      final result =
+          await processInIsolate(bytes, mask: segmenter?.call(bytes));
       procRel = await _m.saveProcessed(result.processed);
       thumbRel = await _m.saveThumb(result.thumb);
       colorHex = result.colorHex;
@@ -272,7 +294,8 @@ class SqliteRepository implements ClosetRepository {
   // ---- 身材 ----
 
   @override
-  Future<List<BodyRecord>> loadBodyRecords(String personId) => bodies.forPerson(personId);
+  Future<List<BodyRecord>> loadBodyRecords(String personId) =>
+      bodies.forPerson(personId);
 
   @override
   Future<BodyRecord> saveBodyRecord({
@@ -314,7 +337,8 @@ class SqliteRepository implements ClosetRepository {
       ).inspect(file);
 
   @override
-  Future<ImportResult> importBackup(File file, ImportMode mode) => ImportService(
+  Future<ImportResult> importBackup(File file, ImportMode mode) =>
+      ImportService(
         dirs: _d,
         media: _m,
         persons: persons,
@@ -327,7 +351,9 @@ class SqliteRepository implements ClosetRepository {
   String _extOf(Uint8List bytes) {
     if (bytes.length > 12) {
       if (bytes[0] == 0x89 && bytes[1] == 0x50) return 'png';
-      if (bytes[0] == 0x52 && bytes[1] == 0x49 && bytes[8] == 0x57) return 'webp';
+      if (bytes[0] == 0x52 && bytes[1] == 0x49 && bytes[8] == 0x57) {
+        return 'webp';
+      }
     }
     return 'jpg';
   }

@@ -40,7 +40,8 @@ class BackupCounts {
       );
 
   @override
-  String toString() => '$persons 个角色 · $items 件衣服 · $images 张图 · $bodyRecords 条身材记录';
+  String toString() =>
+      '$persons 个角色 · $items 件衣服 · $images 张图 · $bodyRecords 条身材记录';
 }
 
 class ExportResult {
@@ -72,9 +73,32 @@ class ExportService {
     final archive = Archive();
     final itemJson = <Map<String, Object?>>[];
     final bodyJson = <Map<String, Object?>>[];
+    final personJson = <Map<String, Object?>>[];
     var imageCount = 0;
 
     for (final person in allPersons) {
+      // 头像单独打包：它不属于任何 item，但丢了换机后角色列表就全剩首字色块。
+      String? avatarName;
+      final avatarRel = person.avatarPath;
+      if (avatarRel != null && avatarRel.isNotEmpty) {
+        final file = File(media.abs(avatarRel));
+        if (await file.exists()) {
+          final ext = p.extension(avatarRel).isEmpty ? '.jpg' : p.extension(avatarRel);
+          avatarName = 'avatars/${person.id}$ext';
+          final bytes = await file.readAsBytes();
+          archive.addFile(ArchiveFile(avatarName, bytes.length, bytes));
+        }
+      }
+
+      personJson.add({
+        'id': person.id,
+        'name': person.name,
+        'heightCm': person.heightCm,
+        'avatar': avatarName,
+        'sortIndex': person.sortIndex,
+        'createdAt': person.createdAt,
+      });
+
       final personItems = await items.listForPerson(person.id);
       for (final item in personItems) {
         final imgs = await images.forItem(item.id);
@@ -155,22 +179,14 @@ class ExportService {
     };
 
     final data = {
-      'persons': [
-        for (final person in allPersons)
-          {
-            'id': person.id,
-            'name': person.name,
-            'heightCm': person.heightCm,
-            'sortIndex': person.sortIndex,
-            'createdAt': person.createdAt,
-          }
-      ],
+      'persons': personJson,
       'items': itemJson,
       'bodyRecords': bodyJson,
     };
 
     void addJson(String name, Object? payload) {
-      final bytes = utf8.encode(const JsonEncoder.withIndent('  ').convert(payload));
+      final bytes =
+          utf8.encode(const JsonEncoder.withIndent('  ').convert(payload));
       archive.addFile(ArchiveFile(name, bytes.length, bytes));
     }
 
@@ -262,8 +278,8 @@ class ImportService {
     if (mf == null) {
       throw const FormatException('这个文件里没有 manifest.json，不是本 App 的备份包');
     }
-    final manifest =
-        jsonDecode(utf8.decode(mf.content as List<int>)) as Map<String, Object?>;
+    final manifest = jsonDecode(utf8.decode(mf.content as List<int>))
+        as Map<String, Object?>;
     final preview = BackupPreview(
       file: file,
       schemaVersion: (manifest['schemaVersion'] as num?)?.toInt() ?? 0,
@@ -295,8 +311,8 @@ class ImportService {
     if (dataFile == null) {
       throw const FormatException('这个文件里没有 data.json');
     }
-    final data =
-        jsonDecode(utf8.decode(dataFile.content as List<int>)) as Map<String, Object?>;
+    final data = jsonDecode(utf8.decode(dataFile.content as List<int>))
+        as Map<String, Object?>;
 
     if (mode == ImportMode.replace) {
       await _wipe();
@@ -322,9 +338,26 @@ class ImportService {
         skipped++;
         continue;
       }
+
+      String? avatarRel;
+      final avatarName = m['avatar'] as String?;
+      if (avatarName != null && avatarName.isNotEmpty) {
+        final entry = find(avatarName);
+        if (entry == null) {
+          missing++;
+        } else {
+          final bytes = Uint8List.fromList(entry.content as List<int>);
+          final ext = p.extension(avatarName).isEmpty
+              ? 'jpg'
+              : p.extension(avatarName).substring(1);
+          avatarRel = await media.saveAvatar(bytes, ext: ext);
+        }
+      }
+
       final person = Person(
         id: id,
         name: (m['name'] as String?) ?? '未命名',
+        avatarPath: avatarRel,
         heightCm: (m['heightCm'] as num?)?.toDouble(),
         sortIndex: (m['sortIndex'] as num?)?.toInt() ?? 0,
         createdAt: (m['createdAt'] as num?)?.toInt() ?? nowMs(),
@@ -372,7 +405,8 @@ class ImportService {
 
       for (final iraw in (m['images'] as List? ?? const [])) {
         final im = (iraw as Map).cast<String, Object?>();
-        final files = (im['files'] as Map?)?.cast<String, Object?>() ?? const {};
+        final files =
+            (im['files'] as Map?)?.cast<String, Object?>() ?? const {};
 
         Future<String?> restore(String key) async {
           final path = files[key] as String?;
@@ -383,7 +417,9 @@ class ImportService {
             return null;
           }
           final bytes = Uint8List.fromList(entry.content as List<int>);
-          final ext = p.extension(path).isEmpty ? 'jpg' : p.extension(path).substring(1);
+          final ext = p.extension(path).isEmpty
+              ? 'jpg'
+              : p.extension(path).substring(1);
           switch (key) {
             case 'orig':
               return media.saveOriginal(bytes, ext: ext);
@@ -397,7 +433,9 @@ class ImportService {
         final image = ItemImage(
           id: (im['id'] as String?) ?? '${itemId}_$nImages',
           itemId: itemId,
-          kind: (im['kind'] as String?) == 'worn' ? ImageKind.worn : ImageKind.flat,
+          kind: (im['kind'] as String?) == 'worn'
+              ? ImageKind.worn
+              : ImageKind.flat,
           origPath: await restore('orig'),
           processedPath: await restore('processed'),
           thumbPath: await restore('thumb'),

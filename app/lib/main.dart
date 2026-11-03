@@ -58,10 +58,12 @@ class _Boot extends ConsumerWidget {
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
-                const Icon(Icons.error_outline, size: 30, color: AppColors.ink3),
+                const Icon(Icons.error_outline,
+                    size: 30, color: AppColors.ink3),
                 const SizedBox(height: 14),
                 const Text('打不开衣橱数据',
-                    style: TextStyle(fontSize: 15, fontWeight: FontWeight.w500)),
+                    style:
+                        TextStyle(fontSize: 15, fontWeight: FontWeight.w500)),
                 const SizedBox(height: 8),
                 Text('$e', style: AppTheme.hint, textAlign: TextAlign.center),
                 const SizedBox(height: 20),

@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mingtian_chuanshenme/models.dart';
+import 'package:mingtian_chuanshenme/ui/item/capture_page.dart';
 import 'package:mingtian_chuanshenme/ui/item/item_detail_page.dart';
 import 'package:mingtian_chuanshenme/ui/person/body_record_page.dart';
+import 'package:mingtian_chuanshenme/ui/person/body_trend_page.dart';
 import 'package:mingtian_chuanshenme/ui/person/person_edit_page.dart';
 import 'package:mingtian_chuanshenme/ui/person/person_page.dart';
 import 'package:mingtian_chuanshenme/ui/settings/category_page.dart';
@@ -139,6 +141,51 @@ void main() {
       matchesGoldenFile('goldens/11_settings.png'),
     );
   });
+
+  testWidgets('12 角色排序', (tester) async {
+    final persons = await repo.loadPersons();
+    await pumpScreen(tester, PersonSortPage(persons: persons), repo: repo);
+    await expectLater(
+      find.byType(PersonSortPage),
+      matchesGoldenFile('goldens/12_person_sort.png'),
+    );
+  });
+
+  testWidgets('13 身材趋势', (tester) async {
+    await pumpScreen(
+      tester,
+      BodyTrendPage(personId: repo.persons.first.id),
+      repo: repo,
+    );
+    await expectLater(
+      find.byType(BodyTrendPage),
+      matchesGoldenFile('goldens/13_body_trend.png'),
+    );
+  });
+
+  testWidgets('14 身材趋势·切换指标', (tester) async {
+    await pumpScreen(
+      tester,
+      BodyTrendPage(personId: repo.persons.first.id),
+      repo: repo,
+    );
+    await tester.tap(find.text('腰围'));
+    await tester.pumpAndSettle();
+    await expectLater(
+      find.byType(BodyTrendPage),
+      matchesGoldenFile('goldens/14_body_trend_waist.png'),
+    );
+  });
+
+  testWidgets('15 连拍（相机不可用时的兜底）', (tester) async {
+    // 测试环境里 availableCameras() 抛 MissingPluginException，
+    // 正好覆盖「相机打不开」这条分支——真机上没权限也是这条。
+    await pumpScreen(tester, const CapturePage(), repo: repo);
+    await expectLater(
+      find.byType(CapturePage),
+      matchesGoldenFile('goldens/15_capture_error.png'),
+    );
+  });
 }
 
 /// 一份像用了一年的衣橱：两个角色、十几件衣服、几次身材记录。
@@ -163,16 +210,42 @@ FakeRepository _seedRepo() {
 
   // 内置类别（与 db.dart 的种子一致，只取截图要用的部分）。
   repo.categories.addAll(const [
-    Category(id: 'b_top_0', l1: 'top', name: '短袖T恤', isBuiltin: true, createdAt: 0),
-    Category(id: 'b_top_1', l1: 'top', name: '长袖T恤', isBuiltin: true, createdAt: 0),
-    Category(id: 'b_top_2', l1: 'top', name: '衬衫', isBuiltin: true, createdAt: 0),
-    Category(id: 'b_top_3', l1: 'top', name: '卫衣', isBuiltin: true, createdAt: 0),
-    Category(id: 'b_top_4', l1: 'top', name: '针织衫', isBuiltin: true, createdAt: 0),
-    Category(id: 'b_bottom_0', l1: 'bottom', name: '长裤', isBuiltin: true, createdAt: 0),
-    Category(id: 'b_bottom_1', l1: 'bottom', name: '牛仔裤', isBuiltin: true, createdAt: 0),
-    Category(id: 'b_outer_0', l1: 'outer', name: '夹克', isBuiltin: true, createdAt: 0),
-    Category(id: 'b_outer_1', l1: 'outer', name: '大衣', isBuiltin: true, createdAt: 0),
-    Category(id: 'b_shoe_0', l1: 'shoe', name: '运动鞋', isBuiltin: true, createdAt: 0),
+    Category(
+        id: 'b_top_0', l1: 'top', name: '短袖T恤', isBuiltin: true, createdAt: 0),
+    Category(
+        id: 'b_top_1', l1: 'top', name: '长袖T恤', isBuiltin: true, createdAt: 0),
+    Category(
+        id: 'b_top_2', l1: 'top', name: '衬衫', isBuiltin: true, createdAt: 0),
+    Category(
+        id: 'b_top_3', l1: 'top', name: '卫衣', isBuiltin: true, createdAt: 0),
+    Category(
+        id: 'b_top_4', l1: 'top', name: '针织衫', isBuiltin: true, createdAt: 0),
+    Category(
+        id: 'b_bottom_0',
+        l1: 'bottom',
+        name: '长裤',
+        isBuiltin: true,
+        createdAt: 0),
+    Category(
+        id: 'b_bottom_1',
+        l1: 'bottom',
+        name: '牛仔裤',
+        isBuiltin: true,
+        createdAt: 0),
+    Category(
+        id: 'b_outer_0',
+        l1: 'outer',
+        name: '夹克',
+        isBuiltin: true,
+        createdAt: 0),
+    Category(
+        id: 'b_outer_1',
+        l1: 'outer',
+        name: '大衣',
+        isBuiltin: true,
+        createdAt: 0),
+    Category(
+        id: 'b_shoe_0', l1: 'shoe', name: '运动鞋', isBuiltin: true, createdAt: 0),
     // 两个自建标签
     Category(id: 'c_vest', l1: 'top', name: '背心', sortIndex: 9, createdAt: 0),
     Category(id: 'c_cami', l1: 'top', name: '吊带', sortIndex: 10, createdAt: 0),

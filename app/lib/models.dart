@@ -249,7 +249,8 @@ class ItemImage {
   factory ItemImage.fromMap(Map<String, Object?> m) => ItemImage(
         id: m['id'] as String,
         itemId: m['item_id'] as String,
-        kind: (m['kind'] as String?) == 'worn' ? ImageKind.worn : ImageKind.flat,
+        kind:
+            (m['kind'] as String?) == 'worn' ? ImageKind.worn : ImageKind.flat,
         origPath: m['orig_path'] as String?,
         processedPath: m['processed_path'] as String?,
         thumbPath: m['thumb_path'] as String?,
@@ -408,9 +409,9 @@ class L1Category {
     L1Category('acc', '配饰'),
   ];
 
-  static String labelOf(String code) =>
-      all.firstWhere((e) => e.code == code, orElse: () => L1Category(code, code))
-          .label;
+  static String labelOf(String code) => all
+      .firstWhere((e) => e.code == code, orElse: () => L1Category(code, code))
+      .label;
 }
 
 const kSeasonAll = 'all';

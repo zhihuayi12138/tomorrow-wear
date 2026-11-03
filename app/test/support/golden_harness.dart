@@ -164,14 +164,14 @@ Uint8List fakeWorn({int seed = 0}) {
   }
   const skin = 0xFFD2BAA8;
   // 头、肩、腿：用几段椭圆糊成一个粗略剪影
-  _fillEllipse(bytes, w, h, w ~/ 2, 150, 46, 58,
-      (skin >> 16) & 0xFF, (skin >> 8) & 0xFF, skin & 0xFF);
-  _fillEllipse(bytes, w, h, w ~/ 2, 560, 110, 120,
-      (skin >> 16) & 0xFF, (skin >> 8) & 0xFF, skin & 0xFF);
+  _fillEllipse(bytes, w, h, w ~/ 2, 150, 46, 58, (skin >> 16) & 0xFF,
+      (skin >> 8) & 0xFF, skin & 0xFF);
+  _fillEllipse(bytes, w, h, w ~/ 2, 560, 110, 120, (skin >> 16) & 0xFF,
+      (skin >> 8) & 0xFF, skin & 0xFF);
   // 衣服
   final cloth = _palette[seed % _palette.length];
-  _fillEllipse(bytes, w, h, w ~/ 2, 380, 130, 165,
-      (cloth >> 16) & 0xFF, (cloth >> 8) & 0xFF, cloth & 0xFF);
+  _fillEllipse(bytes, w, h, w ~/ 2, 380, 130, 165, (cloth >> 16) & 0xFF,
+      (cloth >> 8) & 0xFF, cloth & 0xFF);
   return _encodePng(bytes, w, h);
 }
 
@@ -320,7 +320,9 @@ void _fillEllipse(
   int b,
 ) {
   for (var y = (cy - ry).clamp(0, h - 1); y <= (cy + ry).clamp(0, h - 1); y++) {
-    for (var x = (cx - rx).clamp(0, w - 1); x <= (cx + rx).clamp(0, w - 1); x++) {
+    for (var x = (cx - rx).clamp(0, w - 1);
+        x <= (cx + rx).clamp(0, w - 1);
+        x++) {
       final dx = (x - cx) / rx;
       final dy = (y - cy) / ry;
       if (dx * dx + dy * dy > 1) continue;

@@ -28,8 +28,7 @@ final categoriesProvider = FutureProvider<List<Category>>((ref) {
 });
 
 /// 当前选中的角色。空衣柜时是 null，UI 负责引导去建角色。
-final currentPersonIdProvider =
-    StateProvider<String?>((ref) => null);
+final currentPersonIdProvider = StateProvider<String?>((ref) => null);
 
 /// 实际生效的角色：用户选过的那个若还在就用它，否则退回第一个。
 final activePersonProvider = Provider<Person?>((ref) {
@@ -56,7 +55,9 @@ class WardrobeFilter {
       categoryL1 == null && season == null && query.trim().isEmpty;
 
   int get activeCount =>
-      (categoryL1 == null ? 0 : 1) + (season == null ? 0 : 1) + (query.trim().isEmpty ? 0 : 1);
+      (categoryL1 == null ? 0 : 1) +
+      (season == null ? 0 : 1) +
+      (query.trim().isEmpty ? 0 : 1);
 
   WardrobeFilter copyWith({
     String? categoryL1,
@@ -104,7 +105,9 @@ final wardrobeItemsProvider = FutureProvider<List<Item>>((ref) async {
 final pendingItemsProvider = FutureProvider<List<Item>>((ref) async {
   final person = ref.watch(activePersonProvider);
   if (person == null) return const [];
-  return ref.read(repositoryProvider).loadItems(person.id, status: ItemStatus.pending);
+  return ref
+      .read(repositoryProvider)
+      .loadItems(person.id, status: ItemStatus.pending);
 });
 
 /// 封面图 map，衣橱与待确认共用。
@@ -156,7 +159,8 @@ final imageBytesProvider =
 });
 
 /// 角色数、衣服数之类的小统计，给「我的」页用。
-final statsProvider = FutureProvider<({int persons, int items, int images})>((ref) async {
+final statsProvider =
+    FutureProvider<({int persons, int items, int images})>((ref) async {
   ref.watch(personsProvider);
   final persons = ref.watch(personsProvider).valueOrNull ?? const <Person>[];
   final repo = ref.read(repositoryProvider);

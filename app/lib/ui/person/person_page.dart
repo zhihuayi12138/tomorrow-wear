@@ -6,6 +6,7 @@ import '../../state/providers.dart';
 import '../../theme.dart';
 import '../widgets/common.dart';
 import 'body_record_page.dart';
+import 'body_trend_page.dart';
 import 'person_edit_page.dart';
 
 /// P5 角色列表 + P6 角色主页（身材档案摘要）。
@@ -28,6 +29,18 @@ class PersonListPage extends ConsumerWidget {
               )
             : null,
         actions: [
+          if (_hasEnoughToSort(persons))
+            IconButton(
+              tooltip: '排序',
+              icon: const Icon(Icons.swap_vert, size: 20),
+              onPressed: () {
+                final list = persons.valueOrNull ?? const <Person>[];
+                Navigator.of(context).push(
+                  MaterialPageRoute(
+                      builder: (_) => PersonSortPage(persons: list)),
+                );
+              },
+            ),
           TextButton.icon(
             onPressed: () => Navigator.of(context).push(
               MaterialPageRoute(builder: (_) => const PersonEditPage()),
@@ -45,7 +58,8 @@ class PersonListPage extends ConsumerWidget {
         ],
       ),
       body: persons.when(
-        loading: () => const Center(child: CircularProgressIndicator(strokeWidth: 2)),
+        loading: () =>
+            const Center(child: CircularProgressIndicator(strokeWidth: 2)),
         error: (e, _) => Center(child: Text('读取失败：$e')),
         data: (list) {
           if (list.isEmpty) {
@@ -71,6 +85,79 @@ class PersonListPage extends ConsumerWidget {
   }
 }
 
+/// 角色卡右侧的「⋯」：改名 / 删角色。
+///
+/// 删除入口刻意放在列表上而不是只放在编辑页里 ——
+/// 编辑页要先点进角色主页再点设置，两步才找得到「怎么删一个人」。
+class _CardMenu extends ConsumerWidget {
+  final Person person;
+  const _CardMenu({required this.person});
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    return PopupMenuButton<String>(
+      icon: const Icon(Icons.more_horiz, size: 20, color: AppColors.ink3),
+      padding: EdgeInsets.zero,
+      splashRadius: 18,
+      onSelected: (v) async {
+        if (v == 'edit') {
+          await Navigator.of(context).push(
+            MaterialPageRoute(builder: (_) => PersonEditPage(existing: person)),
+          );
+        } else if (v == 'delete') {
+          await _confirmDelete(context, ref);
+        }
+      },
+      itemBuilder: (_) => const [
+        PopupMenuItem<String>(value: 'edit', child: Text('改名字和头像')),
+        PopupMenuItem<String>(
+          value: 'delete',
+          child: Text('删掉这个角色', style: TextStyle(color: AppColors.up)),
+        ),
+      ],
+    );
+  }
+
+  Future<void> _confirmDelete(BuildContext context, WidgetRef ref) async {
+    final repo = ref.read(repositoryProvider);
+    final itemCount = (await repo.loadItems(person.id)).length;
+
+    if (!context.mounted) return;
+    final ok = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Text('删掉「${person.name}」？'),
+        content: Text(itemCount == 0
+            ? 'ta 的名下还没有衣服。'
+            : 'ta 名下的 $itemCount 件衣服、所有上身图和身材记录都会一起删掉，删了找不回来。'),
+        actions: [
+          TextButton(
+              onPressed: () => Navigator.pop(context, false),
+              child: const Text('算了')),
+          TextButton(
+            onPressed: () => Navigator.pop(context, true),
+            child: const Text('删掉', style: TextStyle(color: AppColors.up)),
+          ),
+        ],
+      ),
+    );
+    if (ok != true) return;
+
+    await repo.deletePerson(person.id);
+    ref.invalidate(personsProvider);
+    // 删掉的正是当前选中的角色时，把选择清空，否则衣橱会停在旧 id 上。
+    if (ref.read(currentPersonIdProvider) == person.id) {
+      ref.read(currentPersonIdProvider.notifier).state = null;
+    }
+    refreshLists(ref);
+    if (!context.mounted) return;
+    showToast(context, '删掉了「${person.name}」');
+  }
+}
+
+bool _hasEnoughToSort(AsyncValue<List<Person>> persons) =>
+    (persons.valueOrNull?.length ?? 0) >= 2;
+
 class _PersonCard extends ConsumerWidget {
   final Person person;
   const _PersonCard({required this.person});
@@ -78,7 +165,8 @@ class _PersonCard extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final records = ref.watch(bodyRecordsProvider(person.id)).valueOrNull;
-    final latest = (records != null && records.isNotEmpty) ? records.first : null;
+    final latest =
+        (records != null && records.isNotEmpty) ? records.first : null;
 
     return GestureDetector(
       onTap: () {
@@ -119,6 +207,7 @@ class _PersonCard extends ConsumerWidget {
               ),
             ),
             const Icon(Icons.chevron_right, size: 18, color: AppColors.ink3),
+            _CardMenu(person: person),
           ],
         ),
       ),
@@ -136,6 +225,133 @@ class _PersonCard extends ConsumerWidget {
     }
     if (bits.isEmpty) return '还没有身材记录';
     return bits.join(' · ');
+  }
+}
+
+/// 角色排序：长按拖动，松手即存。
+///
+/// 用独立的整页而不是列表内的拖动，是因为列表同时是「进入角色」的入口 ——
+/// 两者抢同一个手势，用户会拖不动也点不准。
+class PersonSortPage extends ConsumerStatefulWidget {
+  final List<Person> persons;
+  const PersonSortPage({super.key, required this.persons});
+
+  @override
+  ConsumerState<PersonSortPage> createState() => _PersonSortPageState();
+}
+
+class _PersonSortPageState extends ConsumerState<PersonSortPage> {
+  late final List<Person> _list = [...widget.persons];
+  bool _saving = false;
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(
+        title: const Text('调整顺序'),
+        leading: IconButton(
+          icon: const Text('取消',
+              style: TextStyle(fontSize: 15, color: AppColors.ink2)),
+          onPressed: () => Navigator.of(context).pop(),
+        ),
+        actions: [
+          TextButton(
+            onPressed: _saving ? null : _save,
+            style: TextButton.styleFrom(foregroundColor: AppColors.accent),
+            child: const Text('存下来', style: TextStyle(fontSize: 14)),
+          ),
+        ],
+      ),
+      body: Column(
+        children: [
+          Padding(
+            padding: const EdgeInsets.fromLTRB(20, 6, 20, 10),
+            child: Align(
+              alignment: Alignment.centerLeft,
+              child: Text('长按拖动。顺序就是衣橱里角色标签的顺序。', style: AppTheme.hint),
+            ),
+          ),
+          Expanded(
+            child: ReorderableListView.builder(
+              padding: const EdgeInsets.fromLTRB(16, 0, 16, 24),
+              itemCount: _list.length,
+              // 用 onReorderItem 而不是已废弃的 onReorder：
+              // 它已经把「移除后索引要减一」算好了，不用自己再判 to > from。
+              onReorderItem: (from, to) {
+                setState(() {
+                  final p = _list.removeAt(from);
+                  _list.insert(to, p);
+                });
+              },
+              proxyDecorator: (child, index, animation) => Material(
+                color: Colors.transparent,
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(vertical: 5),
+                  child: Container(
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(14),
+                      border: Border.all(color: AppColors.line),
+                      boxShadow: const [
+                        BoxShadow(
+                          color: Color(0x14000000),
+                          blurRadius: 12,
+                          offset: Offset(0, 4),
+                        ),
+                      ],
+                    ),
+                    child: child,
+                  ),
+                ),
+              ),
+              itemBuilder: (context, i) {
+                final p = _list[i];
+                return Padding(
+                  key: ValueKey(p.id),
+                  padding: const EdgeInsets.symmetric(vertical: 5),
+                  child: Container(
+                    padding: const EdgeInsets.all(14),
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(14),
+                      border: Border.all(color: AppColors.line),
+                    ),
+                    child: Row(
+                      children: [
+                        PersonAvatar(p, size: 40),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: Text(
+                            p.name,
+                            style: const TextStyle(
+                              fontSize: 15,
+                              color: AppColors.ink,
+                            ),
+                          ),
+                        ),
+                        const Icon(Icons.drag_handle,
+                            size: 20, color: AppColors.ink3),
+                      ],
+                    ),
+                  ),
+                );
+              },
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Future<void> _save() async {
+    setState(() => _saving = true);
+    await ref
+        .read(repositoryProvider)
+        .reorderPersons(_list.map((e) => e.id).toList());
+    ref.invalidate(personsProvider);
+    if (!mounted) return;
+    Navigator.of(context).pop();
+    showToast(context, '顺序存好了');
   }
 }
 
@@ -241,7 +457,8 @@ class PersonPage extends ConsumerWidget {
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 16),
               child: Container(
-                padding: const EdgeInsets.symmetric(vertical: 24, horizontal: 18),
+                padding:
+                    const EdgeInsets.symmetric(vertical: 24, horizontal: 18),
                 decoration: BoxDecoration(
                   color: AppColors.soft,
                   borderRadius: BorderRadius.circular(14),
@@ -249,7 +466,8 @@ class PersonPage extends ConsumerWidget {
                 child: Column(
                   children: [
                     Text('还没有记录',
-                        style: TextStyle(fontSize: 13.5, color: AppColors.ink2)),
+                        style:
+                            TextStyle(fontSize: 13.5, color: AppColors.ink2)),
                     const SizedBox(height: 5),
                     Text(
                       '只填体重也能存，其他 14 项全是选填',
@@ -273,9 +491,33 @@ class PersonPage extends ConsumerWidget {
           ],
           SectionTitle(
             '历史',
-            trailing: Text(
-              records.isEmpty ? '' : '${records.length} 次',
-              style: AppTheme.label,
+            trailing: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                if (records.isNotEmpty)
+                  GestureDetector(
+                    onTap: () => Navigator.of(context).push(
+                      MaterialPageRoute(
+                        builder: (_) => BodyTrendPage(personId: personId),
+                      ),
+                    ),
+                    child: const Row(
+                      children: [
+                        Icon(Icons.show_chart,
+                            size: 14, color: AppColors.accent),
+                        SizedBox(width: 3),
+                        Text('看趋势',
+                            style: TextStyle(
+                                fontSize: 12.5, color: AppColors.accent)),
+                      ],
+                    ),
+                  ),
+                if (records.isNotEmpty) const SizedBox(width: 12),
+                Text(
+                  records.isEmpty ? '' : '${records.length} 次',
+                  style: AppTheme.label,
+                ),
+              ],
             ),
           ),
           if (records.isEmpty)
@@ -398,14 +640,17 @@ class _RestCard extends ConsumerWidget {
               GestureDetector(
                 onTap: () => Navigator.of(context).push(
                   MaterialPageRoute(
-                    builder: (_) => BodyRecordDetailPage(personId: record.personId, record: record),
+                    builder: (_) => BodyRecordDetailPage(
+                        personId: record.personId, record: record),
                   ),
                 ),
                 child: Row(
                   children: [
                     Text('全部 16 项',
-                        style: TextStyle(fontSize: 11.5, color: AppColors.accent)),
-                    const Icon(Icons.chevron_right, size: 14, color: AppColors.accent),
+                        style:
+                            TextStyle(fontSize: 11.5, color: AppColors.accent)),
+                    const Icon(Icons.chevron_right,
+                        size: 14, color: AppColors.accent),
                   ],
                 ),
               ),
@@ -422,13 +667,17 @@ class _RestCard extends ConsumerWidget {
                   width: 108,
                   child: Row(
                     children: [
-                      Text(label, style: const TextStyle(fontSize: 11, color: AppColors.ink3)),
+                      Text(label,
+                          style: const TextStyle(
+                              fontSize: 11, color: AppColors.ink3)),
                       const Spacer(),
                       Text(
                         record[key] == null ? '未填' : _trim(record[key]!),
                         style: TextStyle(
                           fontSize: 11,
-                          color: record[key] == null ? AppColors.ink3 : AppColors.ink2,
+                          color: record[key] == null
+                              ? AppColors.ink3
+                              : AppColors.ink2,
                         ),
                       ),
                     ],
@@ -455,11 +704,13 @@ class _HistoryRow extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final delta = previous == null ? null : record.weightKg - previous!.weightKg;
+    final delta =
+        previous == null ? null : record.weightKg - previous!.weightKg;
     return InkWell(
       onTap: () => Navigator.of(context).push(
         MaterialPageRoute(
-          builder: (_) => BodyRecordDetailPage(personId: personId, record: record),
+          builder: (_) =>
+              BodyRecordDetailPage(personId: personId, record: record),
         ),
       ),
       child: Container(
