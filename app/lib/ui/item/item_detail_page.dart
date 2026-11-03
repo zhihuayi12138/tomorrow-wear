@@ -49,10 +49,13 @@ class ItemDetailPage extends ConsumerWidget {
                     await _confirmDelete(context, ref, item);
                   } else if (v == 'edit') {
                     await _openEditSheet(context, item);
+                  } else if (v == 'reflat') {
+                    await _replaceFlat(context, ref, item);
                   }
                 },
                 itemBuilder: (_) => const [
                   PopupMenuItem(value: 'edit', child: Text('改属性')),
+                  PopupMenuItem(value: 'reflat', child: Text('重传平铺图')),
                   PopupMenuItem(value: 'delete', child: Text('删掉这件衣服')),
                 ],
               ),
@@ -61,7 +64,12 @@ class ItemDetailPage extends ConsumerWidget {
           body: ListView(
             padding: const EdgeInsets.only(bottom: 24),
             children: [
-              if (flats.isNotEmpty) _FlatGallery(flats: flats),
+              if (flats.isNotEmpty)
+                _FlatGallery(flats: flats)
+              else
+                _NoFlatHint(
+                  onTap: () => _replaceFlat(context, ref, item),
+                ),
               _AttributeCard(item: item),
               _WornSection(itemId: item.id, worn: worn),
               const SizedBox(height: 8),
@@ -93,6 +101,52 @@ class ItemDetailPage extends ConsumerWidget {
         .addWornPhoto(itemId: itemId, bytes: bytes);
     ref.invalidate(itemImagesProvider(itemId));
     if (context.mounted) showToast(context, '上身图加好了');
+  }
+
+  /// 重传平铺图。
+  ///
+  /// 走确认框而不是直接替换：旧的那张会被删掉，拍错一次原来那张就没了。
+  /// 名字/类别/季节都保留 —— 用户重传通常只是这张拍糊了。
+  Future<void> _replaceFlat(
+      BuildContext context, WidgetRef ref, Item item) async {
+    final ok = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('换一张平铺图？'),
+        content: const Text(
+          '原来那张会被删掉，找不回来。\n'
+          '名字、类别、季节和上身图都不动。',
+        ),
+        actions: [
+          TextButton(
+              onPressed: () => Navigator.pop(context, false),
+              child: const Text('算了')),
+          TextButton(
+              onPressed: () => Navigator.pop(context, true),
+              child: const Text('换一张')),
+        ],
+      ),
+    );
+    if (ok != true || !context.mounted) return;
+
+    final picker = ImagePicker();
+    final file =
+        await picker.pickImage(source: ImageSource.gallery, imageQuality: 92);
+    if (file == null) return;
+    final bytes = await file.readAsBytes();
+
+    if (context.mounted) showToast(context, '正在处理…');
+    try {
+      await ref
+          .read(repositoryProvider)
+          .replaceFlatPhoto(itemId: item.id, bytes: bytes);
+      ref.invalidate(itemImagesProvider(item.id));
+      ref.invalidate(itemProvider(item.id));
+      refreshLists(ref);
+      if (context.mounted) showToast(context, '换好了');
+    } catch (e) {
+      if (context.mounted) showToast(context, '没换成：$e');
+    }
   }
 
   Future<void> _confirmDelete(
@@ -320,6 +374,46 @@ class _Row extends StatelessWidget {
   }
 }
 
+/// 只有上身图、没有平铺图时的占位。
+///
+/// 这种衣服多半是从别处导进来的，或者当初拍的时候就只拍了上身照。
+/// 给一个直接的补拍入口，别让用户摸到右上角的菜单里。
+class _NoFlatHint extends StatelessWidget {
+  final VoidCallback onTap;
+  const _NoFlatHint({required this.onTap});
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(16, 16, 16, 0),
+      child: GestureDetector(
+        onTap: onTap,
+        child: Container(
+          height: 150,
+          decoration: BoxDecoration(
+            color: AppColors.soft,
+            borderRadius: BorderRadius.circular(16),
+          ),
+          alignment: Alignment.center,
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const Icon(Icons.image_outlined, size: 24, color: AppColors.ink3),
+              const SizedBox(height: 10),
+              Text(
+                '还没有平铺图',
+                style: TextStyle(fontSize: 13, color: AppColors.ink2),
+              ),
+              const SizedBox(height: 4),
+              Text('点这里补一张，会自动抠图换底', style: AppTheme.hint),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
 class _WornSection extends ConsumerWidget {
   final String itemId;
   final List<ItemImage> worn;
@@ -363,7 +457,7 @@ class _WornSection extends ConsumerWidget {
                   ),
                 )
               : SizedBox(
-                  height: 168,
+                  height: 196,
                   child: ListView.separated(
                     scrollDirection: Axis.horizontal,
                     itemCount: worn.length,
@@ -371,6 +465,7 @@ class _WornSection extends ConsumerWidget {
                     itemBuilder: (context, i) {
                       final im = worn[i];
                       return GestureDetector(
+                        onTap: () => _editNote(context, ref, im),
                         onLongPress: () => _confirmDelete(context, ref, im),
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
@@ -393,6 +488,23 @@ class _WornSection extends ConsumerWidget {
                                   ? '未标日期'
                                   : formatShortDate(im.wornDate!),
                               style: AppTheme.label,
+                            ),
+                            const SizedBox(height: 1),
+                            SizedBox(
+                              width: 124,
+                              child: Text(
+                                (im.note == null || im.note!.isEmpty)
+                                    ? '点一下写备注'
+                                    : im.note!,
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                                style: TextStyle(
+                                  fontSize: 11,
+                                  color: (im.note == null || im.note!.isEmpty)
+                                      ? AppColors.ink3
+                                      : AppColors.ink2,
+                                ),
+                              ),
                             ),
                           ],
                         ),
@@ -424,6 +536,45 @@ class _WornSection extends ConsumerWidget {
     );
     if (ok != true) return;
     await ref.read(repositoryProvider).deleteImage(im);
+    ref.invalidate(itemImagesProvider(itemId));
+  }
+
+  /// 备注编辑。
+  ///
+  /// 只给一个单行输入框，不给预置选项 —— 这是「今天配什么裤子穿的」那种
+  /// 私人笔记，预置选项一定不够用。
+  Future<void> _editNote(
+      BuildContext context, WidgetRef ref, ItemImage im) async {
+    final controller = TextEditingController(text: im.note ?? '');
+    final result = await showDialog<String>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('这张图的备注'),
+        content: TextField(
+          controller: controller,
+          autofocus: true,
+          maxLength: 40,
+          decoration: const InputDecoration(
+            hintText: '比如：配那条牛仔裤穿的',
+          ),
+        ),
+        actions: [
+          TextButton(
+              onPressed: () => Navigator.pop(context), child: const Text('算了')),
+          TextButton(
+            onPressed: () => Navigator.pop(context, controller.text.trim()),
+            child: const Text('存下来'),
+          ),
+        ],
+      ),
+    );
+    controller.dispose();
+    if (result == null) return;
+
+    await ref.read(repositoryProvider).updateImage(
+          im.copyWith(
+              note: result.isEmpty ? null : result, clearNote: result.isEmpty),
+        );
     ref.invalidate(itemImagesProvider(itemId));
   }
 }

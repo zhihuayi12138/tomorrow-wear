@@ -26,6 +26,7 @@ class SqliteRepository implements ClosetRepository {
   ImageDao? _images;
   BodyDao? _bodies;
   CategoryDao? _categories;
+  MetaDao? _metas;
 
   /// 处理管线没有分割模型时传 null —— 此时只做统一排版，不抠背景。
   /// 这是 M1 的既定状态，见设计文档 §8。
@@ -54,6 +55,7 @@ class SqliteRepository implements ClosetRepository {
     _images = ImageDao(db);
     _bodies = BodyDao(db);
     _categories = CategoryDao(db);
+    _metas = MetaDao(db);
   }
 
   ClosetDirs get _d {
@@ -94,6 +96,12 @@ class SqliteRepository implements ClosetRepository {
 
   CategoryDao get categories {
     final d = _categories;
+    if (d == null) throw StateError('数据库尚未初始化，请先 warmUp()');
+    return d;
+  }
+
+  MetaDao get metas {
+    final d = _metas;
     if (d == null) throw StateError('数据库尚未初始化，请先 warmUp()');
     return d;
   }
@@ -174,9 +182,14 @@ class SqliteRepository implements ClosetRepository {
     String? categoryL1,
     String? season,
     String? query,
+    SortMode sort = SortMode.newest,
   }) =>
       items.listForPerson(personId,
-          status: status, categoryL1: categoryL1, season: season, query: query);
+          status: status,
+          categoryL1: categoryL1,
+          season: season,
+          query: query,
+          sort: sort);
 
   @override
   Future<Map<String, ItemImage>> loadCovers(String personId) =>
@@ -221,8 +234,12 @@ class SqliteRepository implements ClosetRepository {
     String? colorHex;
     String? colorName;
     try {
-      final result =
-          await processInIsolate(bytes, mask: segmenter?.call(bytes));
+      final settings = await _settingsCache();
+      final result = await processInIsolate(
+        bytes,
+        mask: segmenter?.call(bytes),
+        tileKey: settings.tileColor,
+      );
       procRel = await _m.saveProcessed(result.processed);
       thumbRel = await _m.saveThumb(result.thumb);
       colorHex = result.colorHex;
@@ -253,6 +270,67 @@ class SqliteRepository implements ClosetRepository {
       createdAt: nowMs(),
     ));
     return item;
+  }
+
+  @override
+  Future<Item> replaceFlatPhoto({
+    required String itemId,
+    required Uint8List bytes,
+  }) async {
+    final item = await items.byId(itemId);
+    if (item == null) throw StateError('衣服 $itemId 不存在');
+
+    final origRel = await _m.saveOriginal(bytes, ext: _extOf(bytes));
+
+    String? procRel;
+    String? thumbRel;
+    String? colorHex;
+    String? colorName;
+    try {
+      final settings = await _settingsCache();
+      final result = await processInIsolate(
+        bytes,
+        mask: segmenter?.call(bytes),
+        tileKey: settings.tileColor,
+      );
+      procRel = await _m.saveProcessed(result.processed);
+      thumbRel = await _m.saveThumb(result.thumb);
+      colorHex = result.colorHex;
+      colorName = result.colorName;
+    } catch (_) {
+      procRel = null;
+      thumbRel = null;
+    }
+
+    // 先记下旧图，插完新的再删 —— 中途失败时至少新图已经落库。
+    final oldFlats =
+        (await images.forItem(itemId)).where((e) => e.kind == ImageKind.flat);
+    final doomed = <String>[];
+    for (final f in oldFlats) {
+      final files = await images.deleteWithFiles(f.id);
+      doomed.addAll(files);
+    }
+
+    await images.add(ItemImage(
+      id: _uuid.v4(),
+      itemId: itemId,
+      kind: ImageKind.flat,
+      origPath: origRel,
+      processedPath: procRel,
+      thumbPath: thumbRel,
+      createdAt: nowMs(),
+    ));
+
+    await _m.deleteAll(doomed);
+
+    // 主色跟着新图走；没提出来就保留原值，别把已有的颜色清空。
+    final updated = item.copyWith(
+      colorHex: colorHex,
+      colorName: colorName,
+      updatedAt: nowMs(),
+    );
+    await items.update(updated);
+    return updated;
   }
 
   @override
@@ -313,6 +391,27 @@ class SqliteRepository implements ClosetRepository {
 
   @override
   Future<void> deleteBodyRecord(String recordId) => bodies.delete(recordId);
+
+  // ---- 设置 ----
+
+  AppSettings? _settings;
+
+  /// 处理图片时要读底色，而处理是在一次批量录入里循环发生的。
+  /// 缓存一份，改设置时清掉，避免每张图都查一次库。
+  Future<AppSettings> _settingsCache() async =>
+      _settings ??= await metas.readSettings();
+
+  @override
+  Future<AppSettings> loadSettings() async {
+    _settings = await metas.readSettings();
+    return _settings!;
+  }
+
+  @override
+  Future<void> saveSettings(AppSettings settings) async {
+    await metas.writeSettings(settings);
+    _settings = settings;
+  }
 
   // ---- 备份 ----
 

@@ -83,7 +83,8 @@ class ExportService {
       if (avatarRel != null && avatarRel.isNotEmpty) {
         final file = File(media.abs(avatarRel));
         if (await file.exists()) {
-          final ext = p.extension(avatarRel).isEmpty ? '.jpg' : p.extension(avatarRel);
+          final ext =
+              p.extension(avatarRel).isEmpty ? '.jpg' : p.extension(avatarRel);
           avatarName = 'avatars/${person.id}$ext';
           final bytes = await file.readAsBytes();
           archive.addFile(ArchiveFile(avatarName, bytes.length, bytes));

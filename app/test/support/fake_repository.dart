@@ -153,8 +153,9 @@ class FakeRepository implements ClosetRepository {
     String? categoryL1,
     String? season,
     String? query,
+    SortMode sort = SortMode.newest,
   }) async {
-    return items.where((e) {
+    final list = items.where((e) {
       if (e.personId != personId) return false;
       if (status != null && e.status != status) return false;
       if (categoryL1 != null && e.categoryL1 != categoryL1) return false;
@@ -170,8 +171,27 @@ class FakeRepository implements ClosetRepository {
         return false;
       }
       return true;
-    }).toList()
-      ..sort((a, b) => b.createdAt.compareTo(a.createdAt));
+    }).toList();
+
+    switch (sort) {
+      case SortMode.newest:
+        list.sort((a, b) => b.createdAt.compareTo(a.createdAt));
+      case SortMode.oldest:
+        list.sort((a, b) => a.createdAt.compareTo(b.createdAt));
+      case SortMode.name:
+        list.sort((a, b) {
+          final c = a.name.toLowerCase().compareTo(b.name.toLowerCase());
+          return c != 0 ? c : b.createdAt.compareTo(a.createdAt);
+        });
+      case SortMode.category:
+        list.sort((a, b) {
+          final ia = L1Category.all.indexWhere((e) => e.code == a.categoryL1);
+          final ib = L1Category.all.indexWhere((e) => e.code == b.categoryL1);
+          final c = (ia < 0 ? 99 : ia).compareTo(ib < 0 ? 99 : ib);
+          return c != 0 ? c : b.createdAt.compareTo(a.createdAt);
+        });
+    }
+    return list;
   }
 
   @override
@@ -356,6 +376,32 @@ class FakeRepository implements ClosetRepository {
   }
 
   @override
+  Future<Item> replaceFlatPhoto({
+    required String itemId,
+    required Uint8List bytes,
+  }) async {
+    final i = items.indexWhere((e) => e.id == itemId);
+    if (i < 0) throw StateError('衣服 $itemId 不存在');
+    final old = images
+        .where((e) => e.itemId == itemId && e.kind == ImageKind.flat)
+        .map((e) => e.id)
+        .toList();
+    images.removeWhere((e) => old.contains(e.id));
+    final rel = 'img/orig/flat$_seq.jpg';
+    files[rel] = bytes;
+    images.add(ItemImage(
+      id: _id('i'),
+      itemId: itemId,
+      kind: ImageKind.flat,
+      origPath: rel,
+      processedPath: rel,
+      thumbPath: rel,
+      createdAt: 1767225600000,
+    ));
+    return items[i];
+  }
+
+  @override
   Future<void> updateImage(ItemImage image) async {
     final i = images.indexWhere((e) => e.id == image.id);
     if (i >= 0) images[i] = image;
@@ -438,6 +484,16 @@ class FakeRepository implements ClosetRepository {
   Future<void> deleteBodyRecord(String recordId) async {
     bodyRecords.removeWhere((e) => e.id == recordId);
   }
+
+  // ---- 设置 ----
+
+  AppSettings settings = const AppSettings();
+
+  @override
+  Future<AppSettings> loadSettings() async => settings;
+
+  @override
+  Future<void> saveSettings(AppSettings s) async => settings = s;
 
   // ---- 备份 ----
 

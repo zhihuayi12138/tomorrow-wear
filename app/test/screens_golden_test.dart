@@ -9,6 +9,8 @@ import 'package:mingtian_chuanshenme/ui/person/person_edit_page.dart';
 import 'package:mingtian_chuanshenme/ui/person/person_page.dart';
 import 'package:mingtian_chuanshenme/ui/settings/category_page.dart';
 import 'package:mingtian_chuanshenme/ui/settings/settings_page.dart';
+import 'package:mingtian_chuanshenme/ui/settings/sort_mode_page.dart';
+import 'package:mingtian_chuanshenme/ui/settings/tile_color_page.dart';
 import 'package:mingtian_chuanshenme/ui/shell/home_shell.dart';
 import 'package:mingtian_chuanshenme/ui/wardrobe/pending_queue_page.dart';
 
@@ -186,6 +188,41 @@ void main() {
       matchesGoldenFile('goldens/15_capture_error.png'),
     );
   });
+
+  testWidgets('16 平铺图底色', (tester) async {
+    await pumpScreen(tester, const TileColorPage(), repo: repo);
+    await expectLater(
+      find.byType(TileColorPage),
+      matchesGoldenFile('goldens/16_tile_color.png'),
+    );
+  });
+
+  testWidgets('17 衣橱排序方式', (tester) async {
+    await pumpScreen(tester, const SortModePage(), repo: repo);
+    await expectLater(
+      find.byType(SortModePage),
+      matchesGoldenFile('goldens/17_sort_mode.png'),
+    );
+  });
+
+  testWidgets('18 衣橱按类别排', (tester) async {
+    // 排序存在设置里，改完直接看衣橱的样子——只截排序页看不出效果。
+    repo.settings = const AppSettings(sortMode: SortMode.category);
+    await pumpScreen(tester, const HomeShell(), repo: repo);
+    await expectLater(
+      find.byType(HomeShell),
+      matchesGoldenFile('goldens/18_wardrobe_by_category.png'),
+    );
+  });
+
+  testWidgets('19 只有上身图的衣服', (tester) async {
+    final item = repo.items.firstWhere((e) => e.name == '只有上身图的衬衫');
+    await pumpScreen(tester, ItemDetailPage(itemId: item.id), repo: repo);
+    await expectLater(
+      find.byType(ItemDetailPage),
+      matchesGoldenFile('goldens/19_item_worn_only.png'),
+    );
+  });
 }
 
 /// 一份像用了一年的衣橱：两个角色、十几件衣服、几次身材记录。
@@ -282,6 +319,7 @@ FakeRepository _seedRepo() {
     double? confidence,
     String? flat,
     String? worn,
+    String? wornNote,
     required int createdAt,
   }) {
     repo.items.add(Item(
@@ -316,6 +354,7 @@ FakeRepository _seedRepo() {
         kind: ImageKind.worn,
         origPath: worn,
         wornDate: 1761955200000,
+        note: wornNote,
         createdAt: createdAt,
       ));
     }
@@ -332,6 +371,7 @@ FakeRepository _seedRepo() {
     seasons: const ['spring', 'autumn'],
     flat: flat1,
     worn: worn1,
+    wornNote: '配牛仔裤穿的',
     createdAt: 1762300800000,
   );
   add(
@@ -446,6 +486,21 @@ FakeRepository _seedRepo() {
     colorName: '黑',
     flat: flat4,
     createdAt: 1762300000000,
+  );
+
+  // 只有上身图、没有平铺图——详情页要给「补一张」的入口。
+  add(
+    id: 'it_wornonly',
+    personId: 'p_me',
+    name: '只有上身图的衬衫',
+    l1: 'top',
+    l2: 'b_top_2',
+    colorHex: '#E8E3D6',
+    colorName: '米白',
+    seasons: const ['spring', 'summer'],
+    worn: worn1,
+    wornNote: '第一次试穿',
+    createdAt: 1762400000000,
   );
 
   // 身材记录：最近一次填了 4 项，上一次 3 项。

@@ -124,6 +124,7 @@ class ItemDao {
     String? categoryL1,
     String? season,
     String? query,
+    SortMode sort = SortMode.newest,
   }) async {
     final where = <String>['person_id = ?'];
     final args = <Object?>[personId];
@@ -156,7 +157,7 @@ class ItemDao {
       'item',
       where: where.join(' AND '),
       whereArgs: args,
-      orderBy: 'created_at DESC',
+      orderBy: sort.orderBy,
     );
     return rows.map(Item.fromMap).toList();
   }
@@ -470,7 +471,40 @@ class MetaDao {
     await db.insert('meta', {'key': key, 'value': value},
         conflictAlgorithm: ConflictAlgorithm.replace);
   }
+
+  /// 一次读出全部设置。缺的键走默认值，不抛错 ——
+  /// 老用户的库里本来就没有这些键。
+  Future<AppSettings> readSettings() async {
+    final rows = await db.query('meta', where: 'key IN (?, ?)', whereArgs: [
+      _kTileColorKey,
+      _kSortModeKey,
+    ]);
+    String? tile;
+    String? sort;
+    for (final r in rows) {
+      final k = r['key'] as String?;
+      final v = r['value'] as String?;
+      if (k == _kTileColorKey) tile = v;
+      if (k == _kSortModeKey) sort = v;
+    }
+    return AppSettings(
+      tileColor: tile ?? AppSettings.defaultTileColor,
+      sortMode: SortMode.of(sort),
+    );
+  }
+
+  Future<void> writeSettings(AppSettings s) async {
+    final batch = db.batch();
+    batch.insert('meta', {'key': _kTileColorKey, 'value': s.tileColor},
+        conflictAlgorithm: ConflictAlgorithm.replace);
+    batch.insert('meta', {'key': _kSortModeKey, 'value': s.sortMode.code},
+        conflictAlgorithm: ConflictAlgorithm.replace);
+    await batch.commit(noResult: true);
+  }
 }
+
+const _kTileColorKey = 'tile_color';
+const _kSortModeKey = 'sort_mode';
 
 List<String> _pathsOf(List<Map<String, Object?>> rows) {
   final out = <String>[];

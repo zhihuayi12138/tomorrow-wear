@@ -6,12 +6,16 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:share_plus/share_plus.dart';
 
 import '../../core/backup.dart';
+import '../../core/image_processor.dart';
 import '../../data/db.dart';
+import '../../models.dart';
 import '../../state/providers.dart';
 import '../../theme.dart';
 import '../person/person_page.dart';
 import '../widgets/common.dart';
 import 'category_page.dart';
+import 'tile_color_page.dart';
+import 'sort_mode_page.dart';
 
 /// P9 我的：导出、导入、分类体系、设置。
 class SettingsPage extends ConsumerWidget {
@@ -43,6 +47,25 @@ class SettingsPage extends ConsumerWidget {
                   _stat('图片', stats?.images),
                 ],
               ),
+            ),
+          ),
+          const SectionTitle('设置'),
+          _tile(
+            context,
+            icon: Icons.palette_outlined,
+            title: '平铺图底色',
+            subtitle: _tileColorSubtitle(ref),
+            onTap: () => Navigator.of(context).push(
+              MaterialPageRoute(builder: (_) => const TileColorPage()),
+            ),
+          ),
+          _tile(
+            context,
+            icon: Icons.sort,
+            title: '衣橱排序',
+            subtitle: _sortSubtitle(ref),
+            onTap: () => Navigator.of(context).push(
+              MaterialPageRoute(builder: (_) => const SortModePage()),
             ),
           ),
           const SectionTitle('备份'),
@@ -148,6 +171,17 @@ class SettingsPage extends ConsumerWidget {
         ),
       ),
     );
+  }
+
+  String _tileColorSubtitle(WidgetRef ref) {
+    final key = ref.watch(settingsProvider).valueOrNull?.tileColor;
+    final opt = TileOption.of(key);
+    return '${opt.label} · ${opt.hint}';
+  }
+
+  String _sortSubtitle(WidgetRef ref) {
+    final mode = ref.watch(settingsProvider).valueOrNull?.sortMode;
+    return '${SortMode.of(mode?.code).label} · 只影响衣橱网格，不影响待确认';
   }
 
   Future<void> _export(BuildContext context, WidgetRef ref) async {

@@ -44,6 +44,7 @@ abstract class ClosetRepository {
     String? categoryL1,
     String? season,
     String? query,
+    SortMode sort = SortMode.newest,
   });
 
   /// itemId → 封面图。
@@ -71,11 +72,25 @@ abstract class ClosetRepository {
     int? wornDate,
   });
 
+  /// 给已有衣服重传平铺图：旧的平铺图行与文件一起删掉，再按新图重新处理。
+  /// 名字、类别、季节这些手工改过的属性**保留不动** ——
+  /// 用户重传通常只是因为拍糊了，不是想重录一遍。
+  Future<Item> replaceFlatPhoto({
+    required String itemId,
+    required Uint8List bytes,
+  });
+
   Future<void> updateImage(ItemImage image);
   Future<void> deleteImage(ItemImage image);
 
   /// 直接读一张图给预览用（详情页原图/处理图切换）。
   Future<Uint8List?> readImageBytes(String? relPath);
+
+  // ---- 设置 ----
+  Future<AppSettings> loadSettings();
+
+  /// 存底色。**不重算已有图片**，只影响之后新增的。
+  Future<void> saveSettings(AppSettings settings);
 
   // ---- 身材 ----
   Future<List<BodyRecord>> loadBodyRecords(String personId);

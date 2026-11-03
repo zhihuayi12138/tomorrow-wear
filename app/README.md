@@ -19,8 +19,11 @@ flutter pub get
 # 静态检查
 dart analyze lib test
 
-# 渲染 15 张界面截图到 test/goldens/，然后人眼核对
+# 渲染 19 张界面截图到 test/goldens/，然后人眼核对
 flutter test --update-goldens test/screens_golden_test.dart
+
+# 纯函数单元测试（底色、排序 SQL、排版输出）
+flutter test test/image_processor_test.dart
 
 # 打安装包 → build/app/outputs/flutter-apk/app-release.apk
 flutter build apk --release
@@ -46,12 +49,15 @@ flutter build apk --release
 
 - 多角色，各自独立的衣橱，互不可见；角色可拖动排序、可改名换头像、可删除（名下衣服与图片一并清掉）
 - 拍照（App 内连拍）或从相册多选录入，自动统一排版（正方形、统一底色、统一留白）+ 提取主色
+- 平铺图底色四档可选（米灰 / 纯白 / 浅灰 / 暖米），只影响以后新加的衣服
+- 衣橱排序四种（最近加的 / 最早加的 / 按名称 / 按类别），不影响待确认队列
 - 待确认队列：自动分类的结果先进队列，用户翻一遍改错再入库
 - 衣服详情：名称、两级类别（一级固定七个、二级可自建）、主色、季节、上身效果图；可删除
+- 上身图可写备注（40 字），可重传平铺图（属性与上身图都不动）；只有上身图的衣服有补拍入口
 - 身材档案：16 项数据（体重必填、其余选填），按「躯干 / 四肢 / 脚」分组录入，历史记录带与上次的对照
 - 身材趋势：体重 / 腰围 / 胸围 / 臀围 / 大腿围 / 臂围 折线图，横轴按真实日期间隔
 - 导出为 zip 备份（含头像），支持「合并」与「替换」两种恢复方式
-- 十五屏界面由 golden 测试盯着，改动一眼能看出差异
+- 十九屏界面由 golden 测试盯着，改动一眼能看出差异；另有一组纯函数单元测试
 
 ## 还没做
 
@@ -69,7 +75,8 @@ lib/
   state/                   ClosetRepository 接口 + SQLite 实现 + Riverpod providers
   ui/                      页面
 test/
-  screens_golden_test.dart 15 个界面的截图测试
+  screens_golden_test.dart 19 个界面的截图测试
+  image_processor_test.dart 纯函数单元测试（底色、排序 SQL、排版）
   support/                 内存版仓库、字体与假图片生成
 ```
 

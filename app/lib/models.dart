@@ -216,6 +216,7 @@ class ItemImage {
     int? wornDate,
     String? note,
     int? sortIndex,
+    bool clearNote = false,
   }) {
     return ItemImage(
       id: id,
@@ -226,7 +227,7 @@ class ItemImage {
       thumbPath: thumbPath ?? this.thumbPath,
       useProcessed: useProcessed ?? this.useProcessed,
       wornDate: wornDate ?? this.wornDate,
-      note: note ?? this.note,
+      note: clearNote ? null : (note ?? this.note),
       sortIndex: sortIndex ?? this.sortIndex,
       createdAt: createdAt,
     );
@@ -432,4 +433,75 @@ class Season {
   static String labelOf(String code) => all
       .firstWhere((e) => e.code == code, orElse: () => Season(code, code))
       .label;
+}
+
+/// 衣橱网格的排序方式。
+///
+/// 刻意只给四种：再多就得做下拉菜单，而衣橱页顶已经有一行筛选 chip，
+/// 再挂一个排序菜单会挤。四种刚好能塞进一排。
+enum SortMode {
+  newest('newest', '最近加的'),
+  oldest('oldest', '最早加的'),
+  name('name', '按名称'),
+  category('category', '按类别');
+
+  final String code;
+  final String label;
+  const SortMode(this.code, this.label);
+
+  static SortMode of(String? code) => SortMode.values
+      .firstWhere((e) => e.code == code, orElse: () => SortMode.newest);
+
+  /// SQL 的 orderBy 片段。
+  ///
+  /// 「按类别」要按一级类别在界面上的顺序排（上装→下装→…），
+  /// 而不是字典序 —— 字典序会把「下装」排到「上装」前面，看着莫名其妙。
+  String get orderBy {
+    switch (this) {
+      case SortMode.newest:
+        return 'created_at DESC';
+      case SortMode.oldest:
+        return 'created_at ASC';
+      case SortMode.name:
+        return 'name COLLATE NOCASE ASC, created_at DESC';
+      case SortMode.category:
+        final cases = <String>[];
+        for (var i = 0; i < L1Category.all.length; i++) {
+          cases.add("WHEN '${L1Category.all[i].code}' THEN $i");
+        }
+        return 'CASE category_l1 ${cases.join(' ')} ELSE 99 END, '
+            'created_at DESC';
+    }
+  }
+}
+
+/// App 级设置。存 `meta` 表，不进备份（换机后重设一次即可，
+/// 而且底色是观感偏好，跟数据不是一回事）。
+class AppSettings {
+  /// 平铺图底色方案 key，见 `core/image_processor.dart` 的 TileOption。
+  final String tileColor;
+
+  /// 衣橱排序方式。
+  final SortMode sortMode;
+
+  static const defaultTileColor = 'warm';
+
+  const AppSettings({
+    this.tileColor = defaultTileColor,
+    this.sortMode = SortMode.newest,
+  });
+
+  AppSettings copyWith({String? tileColor, SortMode? sortMode}) => AppSettings(
+        tileColor: tileColor ?? this.tileColor,
+        sortMode: sortMode ?? this.sortMode,
+      );
+
+  @override
+  bool operator ==(Object other) =>
+      other is AppSettings &&
+      other.tileColor == tileColor &&
+      other.sortMode == sortMode;
+
+  @override
+  int get hashCode => Object.hash(tileColor, sortMode);
 }

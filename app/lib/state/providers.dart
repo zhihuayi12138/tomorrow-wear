@@ -27,6 +27,12 @@ final categoriesProvider = FutureProvider<List<Category>>((ref) {
   return ref.read(repositoryProvider).loadCategories();
 });
 
+/// App 级设置（底色、排序）。改完立刻 invalidate 自己，衣橱会重排。
+final settingsProvider = FutureProvider<AppSettings>((ref) {
+  ref.watch(bootstrapProvider);
+  return ref.read(repositoryProvider).loadSettings();
+});
+
 /// 当前选中的角色。空衣柜时是 null，UI 负责引导去建角色。
 final currentPersonIdProvider = StateProvider<String?>((ref) => null);
 
@@ -92,12 +98,15 @@ final wardrobeItemsProvider = FutureProvider<List<Item>>((ref) async {
   final person = ref.watch(activePersonProvider);
   if (person == null) return const [];
   final filter = ref.watch(wardrobeFilterProvider);
+  final sort =
+      ref.watch(settingsProvider).valueOrNull?.sortMode ?? SortMode.newest;
   return ref.read(repositoryProvider).loadItems(
         person.id,
         status: ItemStatus.confirmed,
         categoryL1: filter.categoryL1,
         season: filter.season,
         query: filter.query,
+        sort: sort,
       );
 });
 

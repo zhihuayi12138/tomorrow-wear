@@ -8,14 +8,79 @@ import 'package:image/image.dart' as img;
 ///
 /// 这里的函数都是纯函数、无 IO，因此可以安全地丢进 Isolate。
 
-/// 统一底色。浅色衣物会与它融在一起，所以有 [kTileDeep] 备用。
-final kTileColor = _Rgb(0xF2, 0xF2, 0xF0);
-final kTileDeepColor = _Rgb(0xDC, 0xDC, 0xD8);
-
-class _Rgb {
+class Rgb {
   final int r, g, b;
-  const _Rgb(this.r, this.g, this.b);
+  const Rgb(this.r, this.g, this.b);
+
+  /// 打包成 0xRRGGBB，方便测试与预览直接比对。
+  int get value => (r << 16) | (g << 8) | b;
 }
+
+/// 平铺图的底色方案。
+///
+/// 每一档都有「浅一档」和「深一档」两个色：浅色衣物（白、米、浅灰）如果
+/// 铺在浅底色上会连轮廓都看不出来，所以前景平均亮度 > 0.85 时自动换深一档。
+/// 见设计文档 §5.5。
+class TileOption {
+  final String key;
+  final String label;
+
+  /// 给设置页的小字说明：这一档适合什么情况。
+  final String hint;
+  final Rgb normal;
+  final Rgb deep;
+
+  const TileOption(this.key, this.label, this.hint, this.normal, this.deep);
+
+  /// 打包成 0xRRGGBB，测试里直接跟出图角落的像素比。
+  int get normalValue => normal.value;
+  int get deepValue => deep.value;
+
+  /// 米灰是默认值：比纯白耐看，也不会像灰底那样显脏。
+  static const warm = TileOption(
+    'warm',
+    '米灰',
+    '默认。比纯白耐看，深色浅色都不打架。',
+    Rgb(0xF2, 0xF2, 0xF0),
+    Rgb(0xDC, 0xDC, 0xD8),
+  );
+
+  static const white = TileOption(
+    'white',
+    '纯白',
+    '最干净，浅色衣服会换深一档垫底。',
+    Rgb(0xFF, 0xFF, 0xFF),
+    Rgb(0xEC, 0xEC, 0xEA),
+  );
+
+  static const grey = TileOption(
+    'grey',
+    '浅灰',
+    '偏冷，白色和米色的衣服最跳。',
+    Rgb(0xE6, 0xE6, 0xE4),
+    Rgb(0xC9, 0xC9, 0xC6),
+  );
+
+  static const beige = TileOption(
+    'beige',
+    '暖米',
+    '偏暖，适合绝大多数日常衣柜。',
+    Rgb(0xF0, 0xEB, 0xE0),
+    Rgb(0xD9, 0xD0, 0xC0),
+  );
+
+  static const all = <TileOption>[warm, white, grey, beige];
+
+  static const defaultKey = 'warm';
+
+  static TileOption of(String? key) => all.firstWhere(
+        (e) => e.key == key,
+        orElse: () => warm,
+      );
+}
+
+/// 默认底色，保留旧名字给测试与文档引用。
+const kTileColorValue = 0xFFF2F2F0;
 
 /// 处理结果。
 class ProcessedResult {
@@ -53,12 +118,22 @@ const jpegQuality = 85;
 const kCanvasScale = 1.25;
 
 /// 主流程。在 Isolate 里跑，主线程只更新进度。
+///
+/// [tileKey] 是底色方案 key（见 [TileOption]），传 null 用默认米灰。
 ProcessedResult processBytes(
   Uint8List input,
   ByteData? mask, {
   int maxEdge = kMaxEdge,
+  String? tileKey,
 }) {
-  final decoded = img.decodeImage(input);
+  // decodeImage 对某些坏字节抛的是 RangeError/ArgumentError 而不是返回 null，
+  // 统一收成 FormatException：调用方只需要处理一种失败形态。
+  img.Image? decoded;
+  try {
+    decoded = img.decodeImage(input);
+  } catch (_) {
+    decoded = null;
+  }
   if (decoded == null) {
     throw const FormatException('无法解码图片');
   }
@@ -72,7 +147,7 @@ ProcessedResult processBytes(
 
   final canvas = _findForeground(base, mask, maskSide);
 
-  final tile = _pickTileColor(base, canvas);
+  final tile = _pickTileColor(base, canvas, TileOption.of(tileKey));
   final square = _composeSquare(base, canvas, tile, mask, maskSide);
 
   final scaled = _resizeMax(square, maxEdge);
@@ -145,7 +220,10 @@ _Box _findForeground(img.Image im, ByteData? mask, int maskSide) {
 int _maskSide(ByteData mask) => math.sqrt(mask.lengthInBytes).round();
 
 /// 前景平均亮度 > 0.85 时换深一档底色，否则浅色衣物会和背景融掉。
-_Rgb _pickTileColor(img.Image im, _Box box) {
+///
+/// 阈值按底色自身亮度区分：纯白底亮，浅色衣物和它的差值天然小，
+/// 所以阈值要压低一点，否则白 T 恤贴白底还是看不出来。
+Rgb _pickTileColor(img.Image im, _Box box, TileOption option) {
   var sum = 0.0;
   var n = 0;
   final stepX = math.max(1, box.w ~/ 24);
@@ -159,7 +237,10 @@ _Rgb _pickTileColor(img.Image im, _Box box) {
     }
   }
   final avg = n == 0 ? 0.0 : sum / n;
-  return avg > 0.85 ? kTileDeepColor : kTileColor;
+  final baseLum = _luminance(option.normal.r, option.normal.g, option.normal.b);
+  // 底色越亮，允许的「前景和底色差」越小，阈值相应下调。
+  final threshold = baseLum > 0.97 ? 0.80 : 0.85;
+  return avg > threshold ? option.deep : option.normal;
 }
 
 double _luminance(num r, num g, num b) =>
@@ -169,7 +250,7 @@ double _luminance(num r, num g, num b) =>
 img.Image _composeSquare(
   img.Image src,
   _Box box,
-  _Rgb tile,
+  Rgb tile,
   ByteData? mask,
   int maskSide,
 ) {
@@ -421,6 +502,8 @@ Future<ProcessedResult> processInIsolate(
   Uint8List input, {
   ByteData? mask,
   int maxEdge = kMaxEdge,
+  String? tileKey,
 }) {
-  return Isolate.run(() => processBytes(input, mask, maxEdge: maxEdge));
+  return Isolate.run(
+      () => processBytes(input, mask, maxEdge: maxEdge, tileKey: tileKey));
 }
