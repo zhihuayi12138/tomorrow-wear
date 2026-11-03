@@ -8,3 +8,8 @@ desktop.ini
 .idea/
 .vscode/
 *.swp
+.env
+node_modules/
+# µ÷ÊÔÊä³ö
+_analyze.txt
+*.log
