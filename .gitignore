@@ -1,6 +1,10 @@
 # 原型渲染临时目录（无头 Chrome 的 user-data-dir 与裁剪图）
 _shot/
 
+# 模型选型时的一次性实验目录（下载的候选模型、样本、量化脚本，约 470 MB）
+_models/
+_probe/
+
 # 系统与编辑器
 .DS_Store
 Thumbs.db

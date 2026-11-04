@@ -108,7 +108,12 @@ void main() {
   testWidgets('08 记录一次身材', (tester) async {
     await pumpScreen(
       tester,
-      BodyRecordPage(personId: repo.persons.first.id),
+      // 日期必须固定：这页默认是 DateTime.now()，不固定的话
+      // 这份 golden 每天都会挂，而且看起来像真的 UI 改动。
+      BodyRecordPage(
+        personId: repo.persons.first.id,
+        initialDate: DateTime(2026, 11, 3),
+      ),
       repo: repo,
     );
     await expectLater(
@@ -434,11 +439,12 @@ FakeRepository _seedRepo() {
     createdAt: 1761868800000,
   );
 
-  // 待确认三件，其中一件类别拿不准。
+  // 待确认三件。名字是自动起的（颜色 + 二级类别），
+  // 其中第三件模型拿不准二级类别，只有一个颜色词。
   add(
     id: 'it_p1',
     personId: 'p_me',
-    name: '新拍的 1',
+    name: '橄榄绿卫衣',
     l1: 'top',
     l2: 'b_top_3',
     colorHex: '#6E743C',
@@ -451,7 +457,7 @@ FakeRepository _seedRepo() {
   add(
     id: 'it_p2',
     personId: 'p_me',
-    name: '新拍的 2',
+    name: '米白的衣服',
     l1: 'top',
     l2: null,
     colorHex: '#EFEADF',
@@ -464,7 +470,7 @@ FakeRepository _seedRepo() {
   add(
     id: 'it_p3',
     personId: 'p_me',
-    name: '新拍的 3',
+    name: '炭灰长裤',
     l1: 'bottom',
     l2: 'b_bottom_0',
     colorHex: '#3A3A3A',

@@ -12,6 +12,10 @@ abstract class ClosetRepository {
   /// 建目录、打开数据库、写种子数据。App 启动时调一次。
   Future<void> warmUp();
 
+  /// 提前把视觉模型读进内存。纯优化，失败无所谓 ——
+  /// 不做的话代价是「第一张照片多等一两秒」，不是功能缺失。
+  Future<void> prefetchVision();
+
   // ---- 角色 ----
   Future<List<Person>> loadPersons();
   Future<Person> createPerson({required String name, double? heightCm});
@@ -57,10 +61,15 @@ abstract class ClosetRepository {
   Future<void> confirmAll(String personId);
 
   /// 录入一张平铺图：自动处理 + 建档，状态为 pending。
+  ///
+  /// [name] 传 null 表示「自动起名」：按识别出的颜色 + 二级类别拼一个，
+  /// 比如「灰色卫衣」。识别不出来就退回 `新衣服`。
+  /// [categoryL1] / [categoryL2] 传 null 表示交给分类模型猜，
+  /// 猜出来的置信度会写进 `Item.confidence`，低于阈值时待确认队列会高亮。
   Future<Item> addFlatPhoto({
     required String personId,
     required Uint8List bytes,
-    required String name,
+    String? name,
     String? categoryL1,
     String? categoryL2,
     List<String> seasons,

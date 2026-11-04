@@ -22,11 +22,14 @@ dart analyze lib test
 # 渲染 19 张界面截图到 test/goldens/，然后人眼核对
 flutter test --update-goldens test/screens_golden_test.dart
 
-# 纯函数单元测试（底色、排序 SQL、排版输出）
-flutter test test/image_processor_test.dart
+# 全部单元测试（底色、排序 SQL、排版输出、分类打分、标签对齐）
+flutter test
 
-# 打安装包 → build/app/outputs/flutter-apk/app-release.apk
-flutter build apk --release
+# 真机上验 ONNX 管线（电脑上跑会是绿的，但模型一次都没跑过）
+flutter test integration_test/vision_device_test.dart -d emulator-5554
+
+# 按架构出安装包 → build/app/outputs/flutter-apk/app-arm64-v8a-release.apk
+flutter build apk --release --split-per-abi
 ```
 
 `flutter analyze` 在某些中文路径下会崩在 analysis server 的 LSP 初始化上，用 `dart analyze` 代替即可。
@@ -48,7 +51,9 @@ flutter build apk --release
 ## 现在能做什么
 
 - 多角色，各自独立的衣橱，互不可见；角色可拖动排序、可改名换头像、可删除（名下衣服与图片一并清掉）
-- 拍照（App 内连拍）或从相册多选录入，自动统一排版（正方形、统一底色、统一留白）+ 提取主色
+- 拍照（App 内连拍）或从相册多选录入，**自动抠图**换纯色底、统一排版（正方形、统一留白）+ 提取主色
+- **自动分类**：7 个一级、28 个二级，本地零样本模型，不出网；识别不出就退回一级
+- **自动起名**：主色 + 二级类别，如「奶油短袖T恤」，不用打字
 - 平铺图底色四档可选（米灰 / 纯白 / 浅灰 / 暖米），只影响以后新加的衣服
 - 衣橱排序四种（最近加的 / 最早加的 / 按名称 / 按类别），不影响待确认队列
 - 待确认队列：自动分类的结果先进队列，用户翻一遍改错再入库
@@ -57,12 +62,28 @@ flutter build apk --release
 - 身材档案：16 项数据（体重必填、其余选填），按「躯干 / 四肢 / 脚」分组录入，历史记录带与上次的对照
 - 身材趋势：体重 / 腰围 / 胸围 / 臀围 / 大腿围 / 臂围 折线图，横轴按真实日期间隔
 - 导出为 zip 备份（含头像），支持「合并」与「替换」两种恢复方式
-- 十九屏界面由 golden 测试盯着，改动一眼能看出差异；另有一组纯函数单元测试
+- 十九屏界面由 golden 测试盯着，改动一眼能看出差异；另有 41 个纯函数单元测试
+
+## 模型
+
+`assets/models/` 下三个文件，全部本地推理，不联网、不上传：
+
+| 文件 | 大小 | 用途 |
+|---|---|---|
+| `seg.onnx` | 4.6 MB | u2netp 抠图，输入 uint8 `[1,320,320,3]` |
+| `vision.onnx` | 22.9 MB | MobileCLIP-S0 图像编码器 fp16，输入 uint8 `[1,256,256,3]`，输出 512 维 |
+| `labels.json` | 166 KB | 7 个一级 + 28 个二级类别的离线文本向量 |
+
+文本编码器**不在手机上**：标签向量是打包时在电脑上算好的，手机上只跑图像编码器。这是包体能从上百 MB 压到 27 MB 的关键。
+
+两个模型都被改成了「输入 uint8 NHWC」——否则每张图要过 platform channel 序列化 20 万个 float，开销比推理本身还大。
 
 ## 还没做
 
-- 抠图（分割模型未接入，现在只排版不抠图）
-- 自动分类（零样本 CLIP 未接入）
+- 上架用的签名（现在是 debug 证书）
+- App 图标与启动页（还是 Flutter 默认蓝图标）
+- iOS 从没跑过
+- 分类只在 16 张干净的网图（Wikimedia 单品照）上验过，家里随手拍的效果未知
 
 ## 目录
 
@@ -71,13 +92,24 @@ lib/
   models.dart              数据模型
   theme.dart               配色与主题
   data/                    建表 SQL、DAO
-  core/                    图像处理、媒体文件、备份
+  core/
+    image_processor.dart   排版、底色、主色提取（纯 Dart）
+    vision.dart            ONNX 推理：抠图 + 分类 + 自动起名
+    media_store.dart       图片落盘与物理删除
+    backup.dart            导出 / 导入
   state/                   ClosetRepository 接口 + SQLite 实现 + Riverpod providers
   ui/                      页面
+assets/models/             两个 ONNX 模型 + 离线标签向量
+integration_test/
+  vision_device_test.dart  真机上验 ONNX 管线
 test/
   screens_golden_test.dart 19 个界面的截图测试
-  image_processor_test.dart 纯函数单元测试（底色、排序 SQL、排版）
+  image_processor_test.dart 底色、排序 SQL、排版
+  vision_test.dart         归一化、softmax、mask、自动起名
+  assets_test.dart         labels.json 与内置类别逐个对齐
   support/                 内存版仓库、字体与假图片生成
 ```
 
 `ui/` 只依赖 `state/providers.dart` 和 `models.dart`，从不直接碰 DAO。这条线让测试可以整体替换数据源。
+
+**为什么要有 `integration_test/`**：golden 测试跑在电脑的 Flutter 引擎里，`flutter_onnxruntime` 的 platform channel 不存在，`VisionResult` 全是 null——测试是绿的，但模型一次都没跑过。只有在设备上跑才能证明推理真的通。

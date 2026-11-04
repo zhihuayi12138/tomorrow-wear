@@ -16,14 +16,22 @@ import '../widgets/common.dart';
 /// 4. 三围不在录入时高亮对比差值，1cm 差异多半是量法误差。
 class BodyRecordPage extends ConsumerStatefulWidget {
   final String personId;
-  const BodyRecordPage({super.key, required this.personId});
+
+  /// 默认日期。不传就是今天 —— 测试必须传，否则 golden 每天都不一样。
+  final DateTime? initialDate;
+
+  const BodyRecordPage({
+    super.key,
+    required this.personId,
+    this.initialDate,
+  });
 
   @override
   ConsumerState<BodyRecordPage> createState() => _BodyRecordPageState();
 }
 
 class _BodyRecordPageState extends ConsumerState<BodyRecordPage> {
-  DateTime _date = DateTime.now();
+  late DateTime _date = widget.initialDate ?? DateTime.now();
   late final TextEditingController _weight = TextEditingController();
   final Map<String, TextEditingController> _fields = {};
 

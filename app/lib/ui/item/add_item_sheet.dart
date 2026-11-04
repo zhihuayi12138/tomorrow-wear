@@ -221,11 +221,12 @@ class _AddItemSheetState extends ConsumerState<AddItemSheet> {
     final repo = ref.read(repositoryProvider);
     var n = 0;
     for (final d in _drafts) {
-      final index = n + 1;
+      // 勾了「自动起名」就传 null：仓储会用识别出的颜色 + 类别拼名字，
+      // 比如「灰色卫衣」。识别不出来它会退回「新衣服」，仍然可改。
       await repo.addFlatPhoto(
         personId: widget.personId,
         bytes: d.bytes,
-        name: _autoNamed ? '待确认 $index' : d.name,
+        name: _autoNamed ? null : d.name,
       );
       n++;
     }

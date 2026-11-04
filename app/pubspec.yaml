@@ -1,7 +1,7 @@
 name: mingtian_chuanshenme
 description: 明天穿什么 —— 私人、多角色的服装相册
 publish_to: 'none'
-version: 0.3.0+3
+version: 0.4.0+4
 
 environment:
   sdk: '>=3.4.0 <4.0.0'
@@ -20,11 +20,22 @@ dependencies:
   file_picker: ^8.1.2
   share_plus: ^10.0.2
   camera: ^0.12.2
+  flutter_onnxruntime: ^1.9.0
 
 dev_dependencies:
   flutter_test:
     sdk: flutter
   flutter_lints: ^5.0.0
+  # 真机上验 ONNX 管线用。golden 测试跑在电脑上，
+  # 证明不了 platform channel 那一段是通的。
+  integration_test:
+    sdk: flutter
 
 flutter:
   uses-material-design: true
+  assets:
+    # 抠图（u2netp）与分类（mobileclip_s0 图像编码器）都在本地跑，
+    # 不上传、不联网。标签向量打包时已离线算好，见 assets/models/labels.json。
+    - assets/models/
+    # 真机验证用的样本，只在 integration_test 里读。六张缩到 512 边长、共 192 KB。
+    - integration_test/samples/

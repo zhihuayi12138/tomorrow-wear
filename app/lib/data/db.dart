@@ -5,7 +5,7 @@ import 'package:path/path.dart' as p;
 const kSchemaVersion = 1;
 
 /// 写进备份包 manifest 的版本号，只用于排障，不参与任何判断。
-const kAppVersion = '0.3.0';
+const kAppVersion = '0.4.0';
 
 /// 建表语句与 `设计文档.md` §4.1 的 DDL 逐字对应。
 ///

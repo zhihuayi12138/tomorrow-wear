@@ -25,6 +25,10 @@ class FakeRepository implements ClosetRepository {
   @override
   Future<void> warmUp() async {}
 
+  /// 假仓储没有模型，预热直接返回。
+  @override
+  Future<void> prefetchVision() async {}
+
   // ---- 角色 ----
 
   @override
@@ -249,14 +253,16 @@ class FakeRepository implements ClosetRepository {
   Future<Item> addFlatPhoto({
     required String personId,
     required Uint8List bytes,
-    required String name,
+    String? name,
     String? categoryL1,
     String? categoryL2,
     List<String> seasons = const [kSeasonAll],
   }) async {
     final item = await newItem(
       personId: personId,
-      name: name,
+      // 假仓储不做识别，自动起名就退化成「新衣服」，
+      // 与真实实现里模型加载失败时的行为一致。
+      name: name ?? '新衣服',
       categoryL1: categoryL1 ?? 'top',
       categoryL2: categoryL2,
       seasons: seasons,

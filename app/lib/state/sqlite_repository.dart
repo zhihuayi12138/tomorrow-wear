@@ -1,6 +1,7 @@
 import 'dart:io';
 import 'dart:typed_data';
 
+import 'package:flutter/foundation.dart' show debugPrint, kDebugMode;
 import 'package:path_provider/path_provider.dart';
 import 'package:sqflite/sqflite.dart';
 import 'package:uuid/uuid.dart';
@@ -8,6 +9,7 @@ import 'package:uuid/uuid.dart';
 import '../core/backup.dart';
 import '../core/image_processor.dart';
 import '../core/media_store.dart';
+import '../core/vision.dart';
 import '../data/dao.dart';
 import '../data/db.dart';
 import '../models.dart';
@@ -28,11 +30,25 @@ class SqliteRepository implements ClosetRepository {
   CategoryDao? _categories;
   MetaDao? _metas;
 
-  /// 处理管线没有分割模型时传 null —— 此时只做统一排版，不抠背景。
-  /// 这是 M1 的既定状态，见设计文档 §8。
-  final ByteData? Function(Uint8List bytes)? segmenter;
+  /// 视觉模型（抠图 + 分类）。懒加载：第一次录入时才读 27 MB 模型，
+  /// 不拖慢冷启动。加载失败就退回 null，App 变成纯手动相册，不崩。
+  Future<ClosetVision?>? _visionFuture;
 
-  SqliteRepository({this.segmenter});
+  /// 允许注入一个假的模型做测试；正常运行时为 null，走 [ClosetVision.load]。
+  final Future<ClosetVision?> Function()? visionLoader;
+
+  SqliteRepository({this.visionLoader});
+
+  Future<ClosetVision?> get vision => _visionFuture ??= _loadVision();
+
+  Future<ClosetVision?> _loadVision() async {
+    try {
+      return await (visionLoader?.call() ?? ClosetVision.load());
+    } catch (e) {
+      if (kDebugMode) debugPrint('视觉模型加载失败，退回手动模式：$e');
+      return null;
+    }
+  }
 
   @override
   Future<void> warmUp() async {
@@ -56,6 +72,19 @@ class SqliteRepository implements ClosetRepository {
     _bodies = BodyDao(db);
     _categories = CategoryDao(db);
     _metas = MetaDao(db);
+  }
+
+  @override
+  Future<void> prefetchVision() async {
+    await _loadVisionSafe();
+  }
+
+  Future<ClosetVision?> _loadVisionSafe() async {
+    try {
+      return await vision;
+    } catch (_) {
+      return null;
+    }
   }
 
   ClosetDirs get _d {
@@ -109,6 +138,9 @@ class SqliteRepository implements ClosetRepository {
   Future<void> close() async {
     await _db?.close();
     _db = null;
+    final v = await _visionFuture;
+    _visionFuture = null;
+    await v?.dispose();
   }
 
   // ---- 角色 ----
@@ -221,12 +253,14 @@ class SqliteRepository implements ClosetRepository {
   Future<Item> addFlatPhoto({
     required String personId,
     required Uint8List bytes,
-    required String name,
+    String? name,
     String? categoryL1,
     String? categoryL2,
     List<String> seasons = const [kSeasonAll],
   }) async {
     final origRel = await _m.saveOriginal(bytes, ext: _extOf(bytes));
+
+    final seen = await _analyze(bytes);
 
     // 处理失败不能让录入卡住 —— 保留原图，processed 留空，UI 走降级显示。
     String? procRel;
@@ -237,7 +271,7 @@ class SqliteRepository implements ClosetRepository {
       final settings = await _settingsCache();
       final result = await processInIsolate(
         bytes,
-        mask: segmenter?.call(bytes),
+        mask: seen.mask,
         tileKey: settings.tileColor,
       );
       procRel = await _m.saveProcessed(result.processed);
@@ -249,15 +283,23 @@ class SqliteRepository implements ClosetRepository {
       thumbRel = null;
     }
 
+    // 手工指定优先，没指定才用模型猜的。猜错不要紧，它一定落在待确认队列里。
+    final guessed = seen.cls;
+    final l1 = categoryL1 ?? guessed?.top1.key ?? 'top';
+    final autoL2 = categoryL2 == null ? _builtinL2(l1, guessed) : null;
+    final l2 = categoryL2 ?? autoL2?.id;
+    final confidence = categoryL1 != null ? null : guessed?.confidence;
+
     final item = await items.create(
       personId: personId,
-      name: name,
-      categoryL1: categoryL1 ?? 'top',
-      categoryL2: categoryL2,
+      name: name ?? autoName(colorName: colorName, kind: autoL2?.name),
+      categoryL1: l1,
+      categoryL2: l2,
       colorHex: colorHex,
       colorName: colorName,
       seasons: seasons,
       status: ItemStatus.pending,
+      confidence: confidence,
     );
 
     await images.add(ItemImage(
@@ -272,6 +314,27 @@ class SqliteRepository implements ClosetRepository {
     return item;
   }
 
+  /// 跑一次视觉分析。模型还没加载好或加载失败时返回空结果 ——
+  /// 自动能力坏掉不该让录入也坏掉。
+  Future<VisionResult> _analyze(Uint8List bytes) async {
+    final v = await _loadVisionSafe();
+    if (v == null) return const VisionResult();
+    return v.analyze(bytes);
+  }
+
+  /// 把模型猜的二级类别换成库里真实的 id 与显示名。
+  ///
+  /// 没指定一级类别时只信「猜的一级 + 猜的二级」这一对；
+  /// 指定了一级（比如用户在录入页选了「上装」）就只在那一级里找，
+  /// 不从别的一级搬一个名字过来 —— 那会造出一件「下装 · 卫衣」。
+  _AutoL2? _builtinL2(String l1, Classification? cls) {
+    if (cls == null) return null;
+    if (cls.top1.key != l1) return null;
+    final l2 = cls.l2;
+    if (l2 == null) return null;
+    return _AutoL2('$kBuiltinCategoryPrefix${l1}_${l2.index}', l2.name);
+  }
+
   @override
   Future<Item> replaceFlatPhoto({
     required String itemId,
@@ -282,6 +345,10 @@ class SqliteRepository implements ClosetRepository {
 
     final origRel = await _m.saveOriginal(bytes, ext: _extOf(bytes));
 
+    // 重传时也要重新抠图，否则换了底色设置之后平铺图会一张一个样。
+    // 分类结果这里**不用** —— 每件衣服的类别是用户确认过的，重传只是补张好图。
+    final seen = await _analyze(bytes);
+
     String? procRel;
     String? thumbRel;
     String? colorHex;
@@ -290,7 +357,7 @@ class SqliteRepository implements ClosetRepository {
       final settings = await _settingsCache();
       final result = await processInIsolate(
         bytes,
-        mask: segmenter?.call(bytes),
+        mask: seen.mask,
         tileKey: settings.tileColor,
       );
       procRel = await _m.saveProcessed(result.processed);
@@ -456,4 +523,11 @@ class SqliteRepository implements ClosetRepository {
     }
     return 'jpg';
   }
+}
+
+/// 自动填的二级类别：id 用来入库，name 用来拼名字。
+class _AutoL2 {
+  final String id;
+  final String name;
+  const _AutoL2(this.id, this.name);
 }

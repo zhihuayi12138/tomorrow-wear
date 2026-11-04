@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:io';
 import 'dart:typed_data';
 
@@ -14,7 +15,11 @@ final repositoryProvider = Provider<ClosetRepository>((ref) {
 
 /// 启动闸门：建库、建目录、拿初始数据。失败时把错误暴露给 UI，不白屏。
 final bootstrapProvider = FutureProvider<void>((ref) async {
-  await ref.read(repositoryProvider).warmUp();
+  final repo = ref.read(repositoryProvider);
+  await repo.warmUp();
+  // 模型预热放最后且不等它 —— 冷启动时先让界面出来。
+  // 27 MB 模型读进内存要一两秒，挡在启动路径上就是白屏。
+  unawaited(repo.prefetchVision());
 });
 
 final personsProvider = FutureProvider<List<Person>>((ref) {
