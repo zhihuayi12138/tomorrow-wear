@@ -34,6 +34,34 @@ flutter build apk --release --split-per-abi
 
 `flutter analyze` 在某些中文路径下会崩在 analysis server 的 LSP 初始化上，用 `dart analyze` 代替即可。
 
+## release 包必须单独验（0.4.0 在这里栽过）
+
+debug 构建**不做 R8**，所以依赖 native 层、反射、JNI 的东西在 debug 里怎么跑都是好的，打成 release 就崩。0.4.0 就是这样发出去的：点「加入待确认」必闪退，栈里是
+
+```
+JNI DETECTED ERROR IN APPLICATION: java_class == null
+    in call to GetMethodID
+Fatal signal 6 (SIGABRT)
+```
+
+原因是 R8 把 `ai.onnxruntime.TensorInfo` 混淆成 `yr0`，而 ONNX Runtime 的 native 层按类名字符串找它。已加 `android/app/proguard-rules.pro`（`-keep class ai.onnxruntime.** { *; }`）修掉。
+
+`flutter drive` 不支持 `--release`，验证 release 包的办法是把测试打进 APK 自己跑：
+
+```powershell
+# 打成「测试 App」，装上去让它在 main() 里自动跑，结果从 logcat 读
+flutter build apk --release --target=integration_test/ingest_device_test.dart
+adb install -r build/app/outputs/flutter-apk/app-release.apk
+adb shell am start -n com.mingchuan.mingtian_chuanshenme/.MainActivity
+adb logcat -d | Select-String "Fatal signal|JNI DETECTED|All tests"
+```
+
+改完 keep 规则后，确认 `build/app/outputs/mapping/release/mapping.txt` 里这行没被重命名：
+
+```
+ai.onnxruntime.TensorInfo -> ai.onnxruntime.TensorInfo:
+```
+
 ## 两台机器上踩过的坑（改构建配置前先读）
 
 工程原本放在 `D:\明天穿什么`，Android 构建在三个地方栽过跟头，现在都写进了 `android/` 里：
@@ -102,12 +130,14 @@ lib/
 assets/models/             两个 ONNX 模型 + 离线标签向量
 integration_test/
   vision_device_test.dart  真机上验 ONNX 管线
+  ingest_device_test.dart  真机上验完整录入（release 包也用它）
 test/
   screens_golden_test.dart 19 个界面的截图测试
   image_processor_test.dart 底色、排序 SQL、排版
   vision_test.dart         归一化、softmax、mask、自动起名
   assets_test.dart         labels.json 与内置类别逐个对齐
   support/                 内存版仓库、字体与假图片生成
+android/app/proguard-rules.pro  保住 ONNX Runtime 的类名，别删
 ```
 
 `ui/` 只依赖 `state/providers.dart` 和 `models.dart`，从不直接碰 DAO。这条线让测试可以整体替换数据源。

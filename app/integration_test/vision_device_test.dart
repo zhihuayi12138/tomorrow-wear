@@ -12,7 +12,7 @@ import 'package:mingtian_chuanshenme/models.dart';
 /// 的 platform channel 根本不存在，跑出来的 `VisionResult` 全是 null —— 看着是
 /// 绿的，实际上一个字也没验到。这个文件必须在设备上跑：
 ///
-///   flutter test integration_test/vision_device_test.dart -d <device>
+///   flutter test integration_test/vision_device_test.dart -d `emulator-5554`
 ///
 /// 电脑上的 `vision_test.dart` 只验纯函数，不碰模型。
 void main() {
@@ -49,7 +49,8 @@ void main() {
     final lines = <String>[];
 
     for (final entry in expectations.entries) {
-      final data = await rootBundle.load('integration_test/samples/${entry.key}');
+      final data =
+          await rootBundle.load('integration_test/samples/${entry.key}');
       final bytes = data.buffer.asUint8List();
 
       final sw = Stopwatch()..start();

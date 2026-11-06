@@ -34,6 +34,14 @@ android {
             // TODO: Add your own signing config for the release build.
             // Signing with the debug keys for now, so `flutter run --release` works.
             signingConfig = signingConfigs.getByName("debug")
+
+            // ONNX Runtime 的 native 层按类名字符串找 Java 类，R8 一混淆就
+            // `JNI DETECTED ERROR: java_class == null` 直接 abort（闪退）。
+            // 它的 aar 不带 consumer 规则，只能自己 keep。详见 proguard-rules.pro。
+            proguardFiles(
+                getDefaultProguardFile("proguard-android-optimize.txt"),
+                "proguard-rules.pro",
+            )
         }
     }
 }

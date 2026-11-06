@@ -1,7 +1,7 @@
 name: mingtian_chuanshenme
 description: 明天穿什么 —— 私人、多角色的服装相册
 publish_to: 'none'
-version: 0.4.0+4
+version: 0.4.1+5
 
 environment:
   sdk: '>=3.4.0 <4.0.0'
